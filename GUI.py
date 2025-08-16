@@ -63,8 +63,8 @@ class App(ctk.CTk):
 
         os.makedirs(self.data_folder, exist_ok=True) # Ensure folder exists
 
-        self.settings_file = f"{self.data_folder}/settings.json"
-        self.history_file = f"{self.data_folder}/history.txt"
+        self.settings_file = f"{self.data_folder}\\settings.json"
+        self.history_file = f"{self.data_folder}\\history.txt"
 
         # Create files if missing
         if not os.path.exists(self.settings_file):
@@ -319,11 +319,17 @@ class App(ctk.CTk):
 
         # self.histroy_file_dir_opt.insert('end', f'{os.getcwd()}\history.txt')
 
+        ## Reset Settings Button
+        n_row += 2
+        self.settings_frame.grid_columnconfigure(n_row, weight=1)
+        self.history_reset_button = ctk.CTkButton(self.settings_frame,text="Reset Settings" ,command=self.ResetSettings)
+        self.history_reset_button.grid(row=n_row, column=0, columnspan=2, padx=(10, 10), pady=(20, 5), sticky="ew")
+
         ## Delete Data Button
         n_row += 1
-        self.settings_frame.grid_columnconfigure(n_row+1, weight=1)
-        self.history_reset_button = ctk.CTkButton(self.settings_frame,text="Delete All App Data" ,command=self.DeleAllData)
-        self.history_reset_button.grid(row=n_row+1, column=0, columnspan=2, padx=(10, 10), pady=(20, 10), sticky="ew")
+        self.settings_frame.grid_columnconfigure(n_row, weight=1)
+        self.history_reset_button = ctk.CTkButton(self.settings_frame,text="Delete App Data" , hover_color= "darkred",  command=self.DeleAllData)
+        self.history_reset_button.grid(row=n_row, column=0, columnspan=2, padx=(10, 10), pady=(5, 10), sticky="ew")
 
         # --------------------------------------------------
         #       History Frame
@@ -444,6 +450,100 @@ class App(ctk.CTk):
                 json.dump(self.settings, f, indent=4)
         except IOError as e:
             messagebox.showerror("Error", f"Failed to save settings: {str(e)}")
+    
+    def ResetSettings(self):
+        """Reset settings to defaults (after user confirmation) and update the UI."""
+        if not messagebox.askyesno("Confirm Reset", "This will reset all settings to defaults. Continue?"):
+            return
+
+        try:
+            # Reset settings dict (shallow copy is fine: values are primitives)
+
+            self.settings = self.default_settings.copy()
+
+            # Recompute font size if wallpaper image exists (more robust)
+            wp = self.settings.get("desktop_wallpaper") or fn.get_wallpaper_path()
+            img_w, img_h = 0, 0
+            try:
+                if os.path.exists(wp):
+                    img = Image.open(wp)
+                    img_w, img_h = img.size
+                    self.settings["font size"] = int((img_w + img_h) / 2 * 0.03 / 1.333)
+            except Exception:
+                # If image read fails, keep existing font size value
+                img_w, img_h = 0, 0
+
+            # Apply CTk appearance / theme / scaling
+            try:
+                ctk.set_default_color_theme(ThemeOptions[self.settings["Theme"]])
+            except Exception:
+                # fallback to current theme if lookup fails
+                pass
+            ctk.set_appearance_mode(self.settings["Apperance Mode"])
+            try:
+                ctk.set_widget_scaling(int(self.settings["UI Scaling"].replace("%", "")) / 100)
+            except Exception:
+                pass
+
+            # Update settings widgets to reflect defaults
+            self.appearance_mode_optionemenu.set(self.settings["Apperance Mode"])
+            self.scaling_optionemenu.set(self.settings["UI Scaling"])
+            self.theme_optionemenu.set(self.settings["Theme"])
+            self.font_opt.set(self.settings["font"])
+
+            # Font size entry
+            self.font_size_opt.delete(0, "end")
+            self.font_size_opt.insert("end", self.settings["font size"])
+
+            # Textbox font size entry + apply to textbox
+            self.textbox_font_size_opt.delete(0, "end")
+            self.textbox_font_size_opt.insert("end", self.settings["textbox_fontsize"])
+            try:
+                self.textbox.configure(font=ctk.CTkFont(size=int(self.settings["textbox_fontsize"])))
+            except Exception:
+                pass
+
+            # Position
+            self.position_opt.set(self.settings["position"])
+
+            # Colors (also update globals used by Save)
+            global text_color, box_color
+            text_color = self.settings.get("text_color", "white")
+            box_color = self.settings.get("box_color", "black")
+            try:
+                self.text_color_label_box.configure(text_color=text_color)
+                self.box_color_label_box.configure(text_color=box_color)
+            except Exception:
+                pass
+
+            # Padding entries (note keys used in your code)
+            self.frame_padding_opt.delete(0, "end")
+            self.frame_padding_opt.insert("end", self.settings.get("text_padding", "30"))
+
+            self.text_padding_opt.delete(0, "end")
+            self.text_padding_opt.insert("end", self.settings.get("frame_padding", "80"))
+
+            # Desktop wallpaper entry
+            self.desktop_wallpaper_dir_opt.delete(0, "end")
+            self.desktop_wallpaper_dir_opt.insert("end", self.settings.get("desktop_wallpaper", ""))
+
+            # Update console info (show wallpaper info and suggested font size)
+            self.console_textbox.configure(state="normal")
+            self.console_textbox.delete("1.0", "end")
+            self.console_textbox.insert('0.0', f"● Operating System:\n  --->  {platform.system()}\n\n")
+            self.console_textbox.insert('end', f"● Desktop Wallpaper Location:\n  --->  {self.settings.get('desktop_wallpaper')}\n\n")
+            self.console_textbox.insert('end', f"● Desktop Wallpaper Image Size (using Pillow):\n  ---> {img_w}(w) * {img_h}(h)\n\n")
+            self.console_textbox.insert('end', f"● Suggested Text Font Size for TDL:\n  ---> {self.settings.get('font size')}\n\n")
+            self.console_textbox.insert('end', "● Existing Fonts For Chinese Language Support:\n  ---> Simfang, Simhei, Simkai\n\n")
+            self.console_textbox.configure(state="disabled")
+
+            # Persist defaults to disk
+            self.save_settings()
+
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to reset settings: {str(e)}")
+
 
     ### Updating Settings
 
@@ -680,8 +780,6 @@ class App(ctk.CTk):
         global text_color
         color = colorchooser.askcolor(initialcolor='white')[1]
         self.text_color_label_box.configure(text_color = color)
-        if color:
-            print(f"Chosen text color: {color}")
         text_color = color
         self.settings["text_color"] = color
         self.save_settings()
@@ -690,8 +788,6 @@ class App(ctk.CTk):
         global box_color
         color = colorchooser.askcolor(initialcolor='black')[1]
         self.box_color_label_box.configure(text_color = color)
-        if color:
-            print(f"Chosen box color: {color}")
         box_color = color
         self.settings["box_color"] = color
         self.save_settings()
