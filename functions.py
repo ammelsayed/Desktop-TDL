@@ -8,6 +8,18 @@ import sys,os
 from directories import WindowsFonts
 
 
+def get_file_content(path, branch="main"):
+    import requests, base64
+    api_url = f"https://api.github.com/repos/ammelsayed/Desktop-TDL/contents/{path}?ref={branch}"
+    response = requests.get(api_url)
+    if response.status_code == 200:
+        data = response.json()
+        content = base64.b64decode(data["content"]).decode("utf-8")
+        return content.strip()
+    else:
+        return f"Error: {response.status_code}"
+
+
 def FileSize(file_path):
     try:
         # Get file size in bytes

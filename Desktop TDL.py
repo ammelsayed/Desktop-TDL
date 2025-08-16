@@ -83,6 +83,8 @@ class App(ctk.CTk):
         ctk.set_appearance_mode(self.settings["Apperance Mode"])
         ctk.set_widget_scaling(int(self.settings["UI Scaling"].replace("%", "")) / 100)
 
+        self.VERSION = "1.0.6"
+
         # --------------------------------------------------
         #     Side Bar
         # --------------------------------------------------
@@ -112,7 +114,7 @@ class App(ctk.CTk):
         self.sidebar_button_4 = ctk.CTkButton(self.sidebar_frame,text="Console", command=self.ConsolePage)
         self.sidebar_button_4.grid(row=4, column=0, padx=20, pady=10)
 
-        self.sidebar_version= ctk.CTkLabel(self.sidebar_frame,text="version 1.0.5")
+        self.sidebar_version= ctk.CTkLabel(self.sidebar_frame,text=f"version {self.VERSION}")
         self.sidebar_version.grid(row=6, column=0, padx=20, pady=10)
 
         # --------------------------------------------------
@@ -303,8 +305,18 @@ class App(ctk.CTk):
 
         self.desktop_wallpaper_dir_opt = ctk.CTkEntry(self.settings_frame)
         self.desktop_wallpaper_dir_opt.grid(row=n_row+1, column=0, columnspan =2, padx=(10,10), pady=(0,10), sticky="ew")
-
+        
         self.desktop_wallpaper_dir_opt.insert('end', self.settings["desktop_wallpaper"])
+
+        n_row += 2
+        self.desktop_wallpaper_dir_label = ctk.CTkLabel(self.settings_frame, text="Current Desktop Wallpaper:")
+        self.desktop_wallpaper_dir_label.grid(row=n_row, column=0, padx=(10, padx_left_labels), pady=5, sticky="w")
+
+        ctk_img = ctk.CTkImage(light_image=img, dark_image=img, size = (340,200))
+        self.desktop_wallpaper_image = ctk.CTkLabel(self.settings_frame, text="", image = ctk_img)
+        self.desktop_wallpaper_image.grid(row=n_row+1, column=0, columnspan =2, padx=(10,10), pady=(0,10), sticky="ew")
+
+        
 
         # ### History File Directory
         # n_row += 2
@@ -320,7 +332,7 @@ class App(ctk.CTk):
         # self.histroy_file_dir_opt.insert('end', f'{os.getcwd()}\history.txt')
 
         ## Reset Settings Button
-        n_row += 2
+        n_row += 3
         self.settings_frame.grid_columnconfigure(n_row, weight=1)
         self.history_reset_button = ctk.CTkButton(self.settings_frame,text="Reset Settings" ,command=self.ResetSettings)
         self.history_reset_button.grid(row=n_row, column=0, columnspan=2, padx=(10, 10), pady=(20, 5), sticky="ew")
@@ -370,6 +382,7 @@ class App(ctk.CTk):
         self.console_frame = ctk.CTkFrame(self, corner_radius=0, border_width=0, fg_color="transparent")
         self.console_frame.grid_rowconfigure(2, weight=1)
         self.console_frame.grid_columnconfigure(0, weight=1)
+        self.console_frame.grid_columnconfigure(1, weight=0)
 
         # Label
         self.console_label = ctk.CTkLabel(self.console_frame, text="Console", font=ctk.CTkFont(size=20, weight="bold"))
@@ -387,12 +400,21 @@ class App(ctk.CTk):
         self.console_textbox.insert('end', f"● Existing Fonts For Chinese Language Support:\n  ---> Simfang, Simhei, Simkai\n\n")
         self.console_textbox.configure(state="disabled") # Make it read-only for user input
 
+        # Version Information
+        if fn.get_file_content("version.txt") == self.VERSION:
+            update_msg = f"Latest Version Avaliable: {fn.get_file_content('version.txt')} (Up to date)"
+        else :
+            update_msg = f"Latest Version Avaliable: {fn.get_file_content('version.txt')} (New update avaliable!)"
+
+        self.text_padding_label = ctk.CTkLabel(self.console_frame, text=update_msg)
+        self.text_padding_label.grid(row=3, column=0, padx=(10, 10), pady=(0,10), sticky="w")
+
         # Messages
         self.rights = ctk.CTkLabel(self.console_frame, text="© 2025 Desktop TDL. All rights reserved.", font=ctk.CTkFont(size=12, weight="bold"))
-        self.rights.grid(row=3, column=0, padx=(10, 10), pady=0, sticky="w")
+        self.rights.grid(row=4, column=0, padx=(10, 10), pady=0, sticky="w")
 
         self.messages = ctk.CTkLabel(self.console_frame, text="Visit us at:  ammelsayed.github.io\\projects\DesktopTDL", font=ctk.CTkFont(size=12))
-        self.messages.grid(row=4, column=0, padx=(10, 10), pady=(0,10), sticky="w")
+        self.messages.grid(row=5, column=0, padx=(10, 10), pady=(0,10), sticky="w")
 
         # Bind left mouse click to open the URL
         self.messages.bind("<Button-1>", lambda event: webbrowser.open("https://ammelsayed.github.io/projects/DesktopTDL/"))
@@ -469,6 +491,8 @@ class App(ctk.CTk):
                     img = Image.open(wp)
                     img_w, img_h = img.size
                     self.settings["font size"] = int((img_w + img_h) / 2 * 0.03 / 1.333)
+                    ctk_img = ctk.CTkImage(light_image=img, dark_image=img, size = (340,200))
+                    self.desktop_wallpaper_image.configure(image = ctk_img)
             except Exception:
                 # If image read fails, keep existing font size value
                 img_w, img_h = 0, 0
@@ -810,6 +834,9 @@ class App(ctk.CTk):
             img = Image.open(file_path)
             img_w, img_h = img.size
             self.settings["font size"] = int((img_w + img_h)/2 * 0.03/1.333)
+
+            ctk_img = ctk.CTkImage(light_image=img, dark_image=img, size = (340,200))
+            self.desktop_wallpaper_image.configure(image = ctk_img)
 
             self.font_size_opt.delete(0, "end")
             self.font_size_opt.insert('end',int((img_w + img_h)/2 * 0.03/1.333))
