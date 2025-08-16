@@ -22,7 +22,14 @@ class App(ctk.CTk):
         self.title("Desktop TDL App")
         self.geometry("650x500")
         self.resizable(False, False)  # prevent user from manually resizing
-        self.iconbitmap("assets/checklist.ico")
+
+        # Icon settings
+        icon_path = "assets/checklist.ico"
+        if os.path.exists(icon_path):
+            self.iconbitmap(icon_path)
+        else:
+            # Optional: do nothing, Tkinter will use the default icon
+            pass
 
         # configure grid layout (4x4)
         self.grid_columnconfigure(1, weight=1)
@@ -50,11 +57,14 @@ class App(ctk.CTk):
         img_w, img_h = img.size
         self.default_settings["font size"] = int((img_w + img_h)/2 * 0.03/1.333)
 
-        data_folder = "./data"
-        os.makedirs(data_folder, exist_ok=True) # Ensure folder exists
+        ## Manage where data is saved (histroy and settings)
 
-        self.settings_file = f"{data_folder}/settings.json"
-        self.history_file = f"{data_folder}/history.txt"
+        self.data_folder = f"{os.environ.get('LOCALAPPDATA')}\\Desktop TDL"
+
+        os.makedirs(self.data_folder, exist_ok=True) # Ensure folder exists
+
+        self.settings_file = f"{self.data_folder}/settings.json"
+        self.history_file = f"{self.data_folder}/history.txt"
 
         # Create files if missing
         if not os.path.exists(self.settings_file):
@@ -102,7 +112,7 @@ class App(ctk.CTk):
         self.sidebar_button_4 = ctk.CTkButton(self.sidebar_frame,text="Console", command=self.ConsolePage)
         self.sidebar_button_4.grid(row=4, column=0, padx=20, pady=10)
 
-        self.sidebar_version= ctk.CTkLabel(self.sidebar_frame,text="version 1.0.3")
+        self.sidebar_version= ctk.CTkLabel(self.sidebar_frame,text="version 1.0.5")
         self.sidebar_version.grid(row=6, column=0, padx=20, pady=10)
 
         # --------------------------------------------------
@@ -308,6 +318,12 @@ class App(ctk.CTk):
         # self.histroy_file_dir_opt.grid(row=n_row+1, column=0, columnspan =2, padx=(10,10), pady=(0,10), sticky="ew")
 
         # self.histroy_file_dir_opt.insert('end', f'{os.getcwd()}\history.txt')
+
+        ## Delete Data Button
+        n_row += 1
+        self.settings_frame.grid_columnconfigure(n_row+1, weight=1)
+        self.history_reset_button = ctk.CTkButton(self.settings_frame,text="Delete All App Data" ,command=self.DeleAllData)
+        self.history_reset_button.grid(row=n_row+1, column=0, columnspan=2, padx=(10, 10), pady=(20, 10), sticky="ew")
 
         # --------------------------------------------------
         #       History Frame
@@ -781,6 +797,20 @@ class App(ctk.CTk):
         
         self.history_label.configure(text=f"History file size: {fn.FileSize(self.history_file)}")
 
+    def DeleAllData(self):
+
+        if messagebox.askyesno("Confirm Deletion", 
+                               f"This action will permanently delete all local history and settings files at:\n - {self.settings_file}\n - {self.history_file}\nDo you wish to proceed?"):
+            try:
+                if os.path.exists(self.data_folder):
+                    os.remove(self.data_folder)
+
+            except (IOError, PermissionError) as e:
+                messagebox.showerror("Error", f"Failed to delete history: {str(e)}")
+        else:
+            # Do nothing if user cancels
+            pass
+        
 
 if __name__ == "__main__":
     app = App()
