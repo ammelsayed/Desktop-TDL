@@ -1,0 +1,1 @@
+python -m nuitka --standalone --onefile --windows-console-mode=disable --windows-icon-from-ico=./assets/checklist.png --include-data-dir=data=data --include-data-dir=assets=assets --enable-plugin=tk-inter --show-progress --remove-output ./"Desktop TDL".py
