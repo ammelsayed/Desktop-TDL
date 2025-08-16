@@ -1,8 +1,7 @@
 from PIL import Image, ImageDraw, ImageFont
 from datetime import date
-import tempfile,sys,os
-from ctypes import windll
-import subprocess
+import sys,os
+
 
 
 # Importing Dictonaries
@@ -33,10 +32,7 @@ def get_wallpaper_path():
 
     if sys.platform == "darwin":
         # MacOS
-        import subprocess
-        script = 'tell application "System Events" to get picture of current desktop'
-        args = ["osascript", "-e", script]
-        return subprocess.check_output(args).decode().strip()
+        pass
 
     elif sys.platform.startswith("win"):
         # Windows
@@ -48,31 +44,7 @@ def get_wallpaper_path():
     
     else:
         # Linux
-        import subprocess
-        try:
-            cmd = ['gsettings', 'get',
-                   'org.gnome.desktop.background', 'picture-uri']
-            output = subprocess.check_output(cmd).decode().strip()
-            return output.strip("'\n").replace('file://', '')
-        except Exception as e:
-            print(e)
-            sys.exit(1)
-    
-def reset_wallpaper(new_path):
-    
-    if sys.platform == "darwin":
-        # MacOS
         pass
-
-    elif sys.platform.startswith("win"):
-        # Windows
-        from ctypes import windll
-        windll.user32.SystemParametersInfoW(20, 0, new_path, 3)
-
-    else:
-        # Linux
-        pass
-    
 
 def set_wallpaper(input):
 
@@ -83,6 +55,7 @@ def set_wallpaper(input):
 
     # if it is an image Save to a temporary PNG (lossless, fast)
     else:  
+        import tempfile
         with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
             path = tmp.name
             input.save(path, format="PNG")
@@ -94,16 +67,11 @@ def set_wallpaper(input):
 
     elif sys.platform.startswith("win"):
         # Windows
+        from ctypes import windll
         windll.user32.SystemParametersInfoW(20, 0, path, 3)
 
     elif sys.platform.startswith("linux"):
-        try:
-            subprocess.run(["gsettings", "set", "org.gnome.desktop.background", "picture-uri", f"file://{path}"])
-        except Exception:
-            # Fallback: feh (lightweight)
-            subprocess.run(["feh", "--bg-scale", path])
-    else:
-        raise RuntimeError("Unsupported OS")
+        pass
     
 
 def WriteOnDesktop(

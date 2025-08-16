@@ -1,7 +1,8 @@
-import requests, json
-import os            
 
 def ReturnJson(theme):
+    
+    import requests, json
+    import os            
 
     theme_url = f"https://raw.githubusercontent.com/avalon60/ctk_theme_builder/develop/user_themes/{theme}"
     theme_dir = f"assets/user_themes/temp_{theme}"
