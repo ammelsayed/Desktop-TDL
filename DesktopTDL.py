@@ -91,7 +91,7 @@ class App(ctk.CTk):
         ctk.set_appearance_mode(self.settings["Apperance Mode"])
         ctk.set_widget_scaling(int(self.settings["UI Scaling"].replace("%", "")) / 100)
 
-        self.VERSION = "1.0.6"
+        self.VERSION = "1.0.7"
 
         # --------------------------------------------------
         #     Side Bar
@@ -962,4 +962,5 @@ class App(ctk.CTk):
 
 if __name__ == "__main__":
     app = App()
+
     app.mainloop()
