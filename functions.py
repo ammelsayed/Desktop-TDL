@@ -5,7 +5,7 @@ import sys,os
 
 
 # Importing Dictonaries
-from directories import WindowsFonts
+from directories import WindowsFonts, DebianUbuntuFonts
 
 
 def get_file_content(path, branch="main"):
@@ -41,7 +41,6 @@ def FileSize(file_path):
 
 def get_wallpaper_path():
 
-
     if sys.platform == "darwin":
         # MacOS
         pass
@@ -56,7 +55,14 @@ def get_wallpaper_path():
     
     else:
         # Linux
-        pass
+        from subprocess import run, PIPE
+        shell_command =  run(
+                                """gsettings get org.gnome.desktop.background picture-uri | sed "s/file:\/\///" | xargs -I{} realpath {}""",
+                                shell = True,
+                                stdout=PIPE,
+                                text=True
+                                )
+        return shell_command.stdout.strip("\n")
 
 def set_wallpaper(input):
 
@@ -83,7 +89,13 @@ def set_wallpaper(input):
         windll.user32.SystemParametersInfoW(20, 0, path, 3)
 
     elif sys.platform.startswith("linux"):
-        pass
+        from subprocess import run, PIPE
+        uri = f"file://{path}"
+        run(
+            ["gsettings", "set", "org.gnome.desktop.background", "picture-uri", uri],
+            stdout=PIPE,
+            text=True
+        )
     
 
 def WriteOnDesktop(
@@ -116,8 +128,15 @@ def WriteOnDesktop(
     text = title + "\n".join(f"({i+1}) {item}" for i, item in enumerate(todo_items.split("\n")))
 
     # Load font
-    font = ImageFont.truetype(WindowsFonts[font_name], size=font_size, encoding="utf-8")
+    if sys.platform == "darwin":
+        pass
 
+    elif sys.platform.startswith("win"):
+        font = ImageFont.truetype(WindowsFonts[font_name], size=font_size, encoding="utf-8")
+
+    elif sys.platform.startswith("linux"):
+        font = ImageFont.truetype(DebianUbuntuFonts[font_name], size=font_size, encoding="utf-8")
+    
     # Measure text at origin
     x0, y0, x1, y1 = draw.textbbox((0,0), text, font=font)
     text_width = x1 - x0

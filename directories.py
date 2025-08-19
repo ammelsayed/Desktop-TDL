@@ -57,3 +57,17 @@ WindowsFonts = {
     'Times'   :   'C:\Windows\Fonts\\times.ttf',
 }
 
+DebianUbuntuFonts = {
+    'Arial': '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',  # Closest to Arial
+    'Comic': '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',  # No direct Comic Sans equivalent, using Sans as fallback
+    'Impact': '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',  # No direct Impact equivalent, using bold Sans
+    'Monbaiti': '/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf',  # Monospace fallback
+    'Segoesc': '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',  # Fallback to Sans
+    'Simfang': '/usr/share/fonts/truetype/arphic/ukai.ttf',  # Chinese fallback (AR PL UKai)
+    'Simhei': '/usr/share/fonts/truetype/arphic/uming.ttf',  # Chinese fallback (AR PL UMing)
+    'Simkai': '/usr/share/fonts/truetype/arphic/ukai.ttf',  # Chinese fallback (AR PL UKai)
+    'Tahoma': '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',  # Closest to Tahoma
+    'Taile': '/usr/share/fonts/truetype/arphic/uming.ttf',  # Chinese/Thai fallback
+    'Times': '/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf',  # Closest to Times New Roman
+}
+
