@@ -1,45 +1,93 @@
 
-def ReturnJson(theme):
-    
-    import requests, json
-    import os            
+LanguageOptions = {
 
-    theme_url = f"https://raw.githubusercontent.com/avalon60/ctk_theme_builder/develop/user_themes/{theme}"
-    theme_dir = f"assets/user_themes/temp_{theme}"
-
-    if os.path.exists(theme_dir):
-        return theme_dir
-    else :
-        response = requests.get(theme_url)
-        response.raise_for_status()
-
-        # return response.json()
-    
-        with open(theme_dir, "w") as f:
-            json.dump(response.json(), f, indent=4)
-        return theme_dir
-        
+    "English": "English",
+    "简体中文": "Simplified Chinese",
+    "繁體中文": "Traditional Chinese",
+    "Bahasa Indonesia": "Indonesian",
+    "Bahasa Melayu": "Malay",
+    "Español": "Spanish",
+    "한국어": "Korean",
+    "Italiano": "Italian",
+    "日本語": "Japanese",
+    "Português": "Portuguese",
+    "Русский": "Russian",
+    "ไทย": "Thai",
+    "Tiếng Việt": "Vietnamese",
+    "العربية": "Arabic",
+    "Türkçe": "Turkish",
+    "Deutsch": "German",
+    "Français": "French"
+}
 
 
 ThemeOptions = {
-    "Blue": "blue", 
-    "Dark Blue": "dark-blue", 
-    "Green": "green",
-    # "Anthracite": ReturnJson("Anthracite.json"),
-    # "Cobalt": ReturnJson("Cobalt.json"),
-    # "DaynNight": ReturnJson("DaynNight.json"),
-    # "GhostTrain": ReturnJson("GhostTrain.json"),
-    # "Greengage": ReturnJson("Greengage.json"),
-    # "GreyGhost": ReturnJson("GreyGhost.json"),
-    # "Hades": ReturnJson("Hades.json"),
-    # "Harlequin": ReturnJson("Harlequin.json"),
-    # "MoonlitSky": ReturnJson("MoonlitSky.json"),
-    # "NeonBanana": ReturnJson("NeonBanana.json"),
-    # "NightTrain": ReturnJson("NightTrain.json"),
-    # "Oceanix": ReturnJson("Oceanix.json"),
-    # "Sweetkind": ReturnJson("Sweetkind.json"),
-    # "BlueTestCard": ReturnJson("TestCard.json"),
-    # "TrojanBlue": ReturnJson("TrojanBlue.json")
+    "Blue": { 
+        "button_fg_color" : "#3a7ebf", 
+        "button_hover_color" : "#325882", 
+        "optionmenu_button_hover_color" : "#234567"  
+    }, 
+
+    "Dark Blue": { 
+        "button_fg_color" : "#1f538d", 
+        "button_hover_color" : "#14375e", 
+        "optionmenu_button_hover_color" : "#1e2c40"  
+    }, 
+
+    "Green": { 
+        "button_fg_color" : "#2CC985", 
+        "button_hover_color" : "#0C955A",  
+        "optionmenu_button_hover_color" : "#0b6e3d"  
+    },
+
+    "Pink" : { 
+        "button_fg_color" : "#FF3C9D", 
+        "button_hover_color" : "#DC006E",  
+        "optionmenu_button_hover_color" : "#860055"  
+    },
+
+    "Red": {
+        "button_fg_color" : "#e74c3c",
+        "button_hover_color" : "#c0392b",
+        "optionmenu_button_hover_color" : "#8e2a20"
+    },
+
+    "Burgundy": {
+        "button_fg_color" : "#800020",
+        "button_hover_color" : "#5f0018",
+        "optionmenu_button_hover_color" : "#3a000f"
+    },
+
+    "Orange": {
+        "button_fg_color" : "#ff8c42",
+        "button_hover_color" : "#e56a1f",
+        "optionmenu_button_hover_color" : "#8e3e00"
+    },
+
+    "Gold": {
+        "button_fg_color" : "#d4af37",
+        "button_hover_color" : "#aa8a2b",
+        "optionmenu_button_hover_color" : "#6b5a1a"
+    },
+
+    "Purple": {
+        "button_fg_color" : "#9b59b6",
+        "button_hover_color" : "#7d3ea0",
+        "optionmenu_button_hover_color" : "#5a2a6d"
+    },
+
+    "Coral": {
+        "button_fg_color" : "#ff6f61",
+        "button_hover_color" : "#e04e46",
+        "optionmenu_button_hover_color" : "#8a2a23"
+    },
+
+    "Navy": {
+        "button_fg_color" : "#2c3e50",
+        "button_hover_color" : "#203040",
+        "optionmenu_button_hover_color" : "#121a24"
+    },
+
 }
 
 

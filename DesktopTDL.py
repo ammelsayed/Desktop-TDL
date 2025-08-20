@@ -1,17 +1,38 @@
 import sys, os
-import platform
 import json
 import customtkinter as ctk
 from tkinter import colorchooser
 import tkinter.messagebox as messagebox
 import tkinter.filedialog as filedialog
 import datetime
-import webbrowser
 import functions as fn
 from PIL import Image, ImageTk  
 
 # Importing Dictonaries
 from directories import WindowsFonts, ThemeOptions
+from translations import translations
+
+LanguageOptions = {
+
+    "English": "English",
+    "简体中文": "Simplified Chinese",
+    "繁體中文": "Traditional Chinese",
+    "Bahasa Indonesia": "Indonesian",
+    "Bahasa Melayu": "Malay",
+    "Español": "Spanish",
+    "한국어": "Korean",
+    "Italiano": "Italian",
+    "日本語": "Japanese",
+    "Português": "Portuguese",
+    "Русский": "Russian",
+    "ไทย": "Thai",
+    "Tiếng Việt": "Vietnamese",
+    "العربية": "Arabic",
+    "Türkçe": "Turkish",
+    "Deutsch": "German",
+    "Français": "French"
+}
+
 
 
 class App(ctk.CTk):
@@ -20,17 +41,18 @@ class App(ctk.CTk):
 
         # configure window
         self.title("Desktop TDL App")
-        self.geometry("650x500")
-        self.resizable(False, False)  # prevent user from manually resizing
+        self.geometry("750x600")
+        # self.resizable(False, False)  # prevent user from manually resizing
 
-        # Icon settings
-        icon_path = "./assets/checklist.png"
-        if os.path.exists(icon_path):
-            self.iconphoto(True,ImageTk.PhotoImage(Image.open(icon_path)))
-        else:
-            # Optional: do nothing, Tkinter will use the default icon
-            pass
-
+        ## Icon settings 
+        ## -- load with .png file 
+        # icon_path = "./assets/checklist.png"
+        # if os.path.exists(icon_path):
+        #     self.iconphoto(True,ImageTk.PhotoImage(Image.open(icon_path)))
+        # else: pass
+        ## -- load with .ico file
+        self.iconbitmap("./assets/checklist.ico")
+        
         # configure grid layout (4x4)
         self.grid_columnconfigure(1, weight=1)
         self.grid_columnconfigure((2, 3), weight=0)
@@ -39,6 +61,7 @@ class App(ctk.CTk):
         ### Default settings
         
         self.default_settings = {
+            "Language" : "English",
             "Apperance Mode": "Light",
             "Theme" : "Blue",
             "UI Scaling" : "100%",
@@ -53,6 +76,7 @@ class App(ctk.CTk):
             "desktop_wallpaper": fn.get_wallpaper_path()
         }
 
+        # Need to use a quicker way, much quicker than Pillow....
         img = Image.open(self.default_settings["desktop_wallpaper"])
         img_w, img_h = img.size
         self.default_settings["font size"] = int((img_w + img_h)/2 * 0.03/1.333)
@@ -83,15 +107,20 @@ class App(ctk.CTk):
         if not os.path.exists(self.history_file):
             open(self.history_file, "w").close()  
 
-        img = Image.open(self.settings["desktop_wallpaper"])
-        img_w, img_h = img.size
-        self.settings["font size"] = int((img_w + img_h)/2 * 0.03/1.333)
+        # img = Image.open(self.settings["desktop_wallpaper"])
+        # img_w, img_h = img.size
+        # self.settings["font size"] = int((img_w + img_h)/2 * 0.03/1.333)
 
-        ctk.set_default_color_theme(ThemeOptions[self.settings["Theme"]]) 
+        if self.settings["Theme"] in ["Blue", "Dark Blue", "Green"]:
+            ctk.set_default_color_theme(self.settings["Theme"].lower().replace(" ", "-"))
+        else: pass
+            
         ctk.set_appearance_mode(self.settings["Apperance Mode"])
         ctk.set_widget_scaling(int(self.settings["UI Scaling"].replace("%", "")) / 100)
 
-        self.VERSION = "1.0.7"
+        self.VERSION = "1.0.8"
+
+        self.current_language = self.settings.get("Language", "English")
 
         # --------------------------------------------------
         #     Side Bar
@@ -100,7 +129,7 @@ class App(ctk.CTk):
         # create sidebar frame with widgets
         self.sidebar_frame = ctk.CTkFrame(self, width=120, corner_radius=0, border_width=0, fg_color="transparent")
         self.sidebar_frame.grid(row=0, column=0, rowspan=4, sticky="nsew")
-        self.sidebar_frame.grid_rowconfigure(5, weight=1)
+        self.sidebar_frame.grid_rowconfigure(4, weight=1)
 
         # Logo
         self.logo_label = ctk.CTkLabel(self.sidebar_frame, text="Desktop TDL", font=ctk.CTkFont(size=20, weight="bold"))
@@ -117,13 +146,6 @@ class App(ctk.CTk):
         # History Button
         self.sidebar_button_3 = ctk.CTkButton(self.sidebar_frame,text="History", command=self.HistoryPage)
         self.sidebar_button_3.grid(row=3, column=0, padx=20, pady=10)
-
-        # History Button
-        self.sidebar_button_4 = ctk.CTkButton(self.sidebar_frame,text="Console", command=self.ConsolePage)
-        self.sidebar_button_4.grid(row=4, column=0, padx=20, pady=10)
-
-        self.sidebar_version= ctk.CTkLabel(self.sidebar_frame,text=f"version {self.VERSION}")
-        self.sidebar_version.grid(row=6, column=0, padx=20, pady=10)
 
         # --------------------------------------------------
         #       Main Frame
@@ -147,8 +169,8 @@ class App(ctk.CTk):
         self.text_label.grid(row=1, column=0, padx=(10, 10), pady=(0, 0), sticky="w")
 
         # Clear Button
-        self.reset_button = ctk.CTkButton(self.main_frame,text="Clear", command=self.Clear)
-        self.reset_button.grid(row=1, column=1, padx=(10, 10), pady=(0, 10), sticky="e")
+        self.clear_button = ctk.CTkButton(self.main_frame,text="Clear", command=self.Clear)
+        self.clear_button.grid(row=1, column=1, padx=(10, 10), pady=(0, 10), sticky="e")
 
         # Text box
         textbox_fontsize = 14 # This is a variable
@@ -158,11 +180,11 @@ class App(ctk.CTk):
             self.textbox.insert('0.0',"\n".join(f.read().split("\n\n")[0].split("\n")[1:]))
 
         # Rest Button
-        self.reset_button = ctk.CTkButton(self.main_frame,text="Reset Desktop Wallpaper", command=self.Reset)
+        self.reset_button = ctk.CTkButton(self.main_frame,text="Remove from Desktop", command=self.Reset)
         self.reset_button.grid(row=3, column=0, padx=(10, 10), pady=(0, 10), sticky="ew")
 
         # Save Button
-        self.save_button = ctk.CTkButton(self.main_frame,text="Write On Desktop", command=self.Save)
+        self.save_button = ctk.CTkButton(self.main_frame,text="Add to Desktop", command=self.Save)
         self.save_button.grid(row=3, column=1, padx=(10, 10), pady=(0, 10), sticky="ew")
 
         # --------------------------------------------------
@@ -170,23 +192,34 @@ class App(ctk.CTk):
         # --------------------------------------------------
 
         # create the settings frame
-        self.settings_frame = ctk.CTkScrollableFrame(self, corner_radius=0, border_width=0, fg_color="transparent", orientation="vertical")
+        self.settings_frame = ctk.CTkScrollableFrame(self, corner_radius=0, border_width=0, width =1000, fg_color="transparent", orientation="vertical")
         self.settings_frame.grid_rowconfigure(0, weight=0)
+        self.settings_frame.grid_columnconfigure(0, minsize=350, weight=1)
+        self.settings_frame.grid_columnconfigure(1, minsize=300, weight=1)
 
-        # Label
-        self.settings_label = ctk.CTkLabel(self.settings_frame, text="Settings", font=ctk.CTkFont(size=20, weight="bold"))
-        self.settings_label.grid(row=0, column=0, columnspan=2, padx=(10, 10), pady=(20,10), sticky="w")
+        self.settings_frame_title = ctk.CTkLabel(self.settings_frame, text="Settings", font=ctk.CTkFont(size=20, weight="bold"))
+        self.settings_frame_title.grid(row=0, column=0, columnspan=2, padx=(10, 10), pady=(20,10), sticky="w")
 
-        padx_left_labels = 80
-        padx_right_optiosn = 20
+        padx_left_labels = 10
+        padx_right_optiosn = 10
+
+        ### Language
+        n_row = 1
+        self.language_label = ctk.CTkLabel(self.settings_frame, text="Language", anchor="w")
+        self.language_label.grid(row=n_row, column=0, padx=(10, padx_left_labels), pady=10, sticky="w")
+
+        self.language_opt = ctk.CTkOptionMenu(self.settings_frame, values=list(LanguageOptions.keys()), command=self.change_language_event)
+        self.language_opt.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="e")
+
+        self.language_opt.set(self.settings["Language"])
 
         ### Apperance Mode Settings
-        n_row = 1
+        n_row += 1
         self.appearance_mode_label = ctk.CTkLabel(self.settings_frame, text="Appearance Mode", anchor="w")
         self.appearance_mode_label.grid(row=n_row, column=0, padx=(10, padx_left_labels), pady=10, sticky="w")
 
         self.appearance_mode_optionemenu = ctk.CTkOptionMenu(self.settings_frame, values=["Light", "Dark", "System"], command=self.change_appearance_mode_event)
-        self.appearance_mode_optionemenu.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="w")
+        self.appearance_mode_optionemenu.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="e")
 
         self.appearance_mode_optionemenu.set(self.settings["Apperance Mode"])
 
@@ -195,8 +228,8 @@ class App(ctk.CTk):
         self.ui_scaling_label = ctk.CTkLabel(self.settings_frame, text="UI Scaling", anchor="w")
         self.ui_scaling_label.grid(row=n_row, column=0, padx=(10, padx_left_labels), pady=10, sticky="w")
 
-        self.scaling_optionemenu = ctk.CTkOptionMenu(self.settings_frame, values=["80%", "85%" ,"90%", "95%" , "100%", "105%" , "110%"],command=self.change_scaling_event)
-        self.scaling_optionemenu.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="w")
+        self.scaling_optionemenu = ctk.CTkOptionMenu(self.settings_frame, values=["80%", "85%" ,"90%", "95%" , "100%", "105%" , "110%", "115%", "120%"],command=self.change_scaling_event)
+        self.scaling_optionemenu.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="e")
 
         self.scaling_optionemenu.set(self.settings["UI Scaling"])
 
@@ -206,7 +239,7 @@ class App(ctk.CTk):
         self.theme_label.grid(row=n_row, column=0, padx=(10, padx_left_labels), pady=10, sticky="w")
 
         self.theme_optionemenu = ctk.CTkOptionMenu(self.settings_frame, values=list(ThemeOptions.keys()),command=self.change_theme_event)
-        self.theme_optionemenu.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="w")
+        self.theme_optionemenu.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="e")
 
         self.theme_optionemenu.set(self.settings["Theme"]) 
 
@@ -216,8 +249,8 @@ class App(ctk.CTk):
         self.font_label.grid(row=n_row, column=0, padx=(10, padx_left_labels), pady=10, sticky="w")
 
         font_options = ["Arial", "Arial2", "Arials"]
-        self.font_opt = ctk.CTkOptionMenu(self.settings_frame, values=list(WindowsFonts.keys()))
-        self.font_opt.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="w")
+        self.font_opt = ctk.CTkOptionMenu(self.settings_frame, values=list(WindowsFonts.keys()), command=self.change_font_event)
+        self.font_opt.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="e")
         
         self.font_opt.set(self.settings["font"])
 
@@ -227,9 +260,10 @@ class App(ctk.CTk):
         self.font_size_label.grid(row=n_row, column=0, padx=(10, padx_left_labels), pady=10, sticky="w")
 
         self.font_size_opt = ctk.CTkEntry(self.settings_frame)
-        self.font_size_opt.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="w")
-
-        self.font_size_opt.insert('end',self.settings["font size"])
+        self.font_size_opt.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="e")
+        self.font_size_opt.insert('end', self.settings["font size"])
+        self.font_size_opt.bind("<FocusOut>", lambda e: self.on_font_size_change())
+        self.font_size_opt.bind("<Return>", lambda e: self.on_font_size_change())
 
         ### App Textbox Font Size
         n_row += 1
@@ -237,9 +271,10 @@ class App(ctk.CTk):
         self.textbox_font_size_label.grid(row=n_row, column=0, padx=(10, padx_left_labels), pady=10, sticky="w")
 
         self.textbox_font_size_opt = ctk.CTkEntry(self.settings_frame)
-        self.textbox_font_size_opt.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="w")
-
+        self.textbox_font_size_opt.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="e")
         self.textbox_font_size_opt.insert('end', self.settings["textbox_fontsize"])
+        self.textbox_font_size_opt.bind("<FocusOut>", lambda e: self.on_textbox_font_size_change())
+        self.textbox_font_size_opt.bind("<Return>", lambda e: self.on_textbox_font_size_change())
         self.textbox.configure(font=ctk.CTkFont(size=self.settings["textbox_fontsize"]))
 
         ### Position 
@@ -248,21 +283,20 @@ class App(ctk.CTk):
         self.position_label.grid(row=n_row, column=0, padx=(10, padx_left_labels), pady=10, sticky="w")
 
         position_options = ["Top Right", "Top Left", "Bottom Right", "Bottom Left", "Center"]
-        self.position_opt = ctk.CTkOptionMenu(self.settings_frame, values=position_options)
-        self.position_opt.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="w")
-
+        self.position_opt = ctk.CTkOptionMenu(self.settings_frame, values=position_options, command=self.change_position_event)
+        self.position_opt.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="e")
         self.position_opt.set(self.settings["position"])
 
         ### Text Color
         n_row += 1
-        self.text_color_label = ctk.CTkLabel(self.settings_frame, text="Text Color")
-        self.text_color_label.grid(row=n_row, column=0, padx=(10, padx_left_labels), pady=10, sticky="w")
+        self.text_color_label = ctk.CTkLabel(self.settings_frame, text="Text Color: ")
+        self.text_color_label.grid(row=n_row, column=0, padx=(30, padx_left_labels), pady=10, sticky="w")
 
         self.text_color_label_box = ctk.CTkLabel(self.settings_frame, text="⬤")
-        self.text_color_label_box.grid(row=n_row, column=0, padx=(75, 0), pady=10, sticky="w")
+        self.text_color_label_box.grid(row=n_row, column=0, padx=(10, 10), pady=10, sticky="w")
 
         self.text_color_opt = ctk.CTkButton(self.settings_frame, text="Choose Color", command=self.choose_text_color)
-        self.text_color_opt.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="w")
+        self.text_color_opt.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="e")
 
         global text_color
         text_color = self.settings["text_color"]
@@ -270,14 +304,14 @@ class App(ctk.CTk):
         
         ### Box Color
         n_row += 1
-        self.box_color_label = ctk.CTkLabel(self.settings_frame, text="Box Color")
-        self.box_color_label.grid(row=n_row, column=0, padx=(10, padx_left_labels), pady=10, sticky="w")
+        self.box_color_label = ctk.CTkLabel(self.settings_frame, text="Box Color: ")
+        self.box_color_label.grid(row=n_row, column=0, padx=(30, padx_left_labels), pady=10, sticky="w")
 
         self.box_color_label_box = ctk.CTkLabel(self.settings_frame, text="⬤")
-        self.box_color_label_box.grid(row=n_row, column=0, padx=(75, 0), pady=10, sticky="w")
+        self.box_color_label_box.grid(row=n_row, column=0, padx=(10, 10), pady=10, sticky="w")
 
         self.box_color_opt = ctk.CTkButton(self.settings_frame, text="Choose Color", command=self.choose_box_color)
-        self.box_color_opt.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="w")
+        self.box_color_opt.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="e")
 
         global box_color
         box_color = self.settings["box_color"]
@@ -289,9 +323,10 @@ class App(ctk.CTk):
         self.frame_padding_label.grid(row=n_row, column=0, padx=(10, padx_left_labels), pady=10, sticky="w")
 
         self.frame_padding_opt = ctk.CTkEntry(self.settings_frame)
-        self.frame_padding_opt.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="w")
-
+        self.frame_padding_opt.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="e")
         self.frame_padding_opt.insert('end', self.settings["text_padding"])
+        self.frame_padding_opt.bind("<FocusOut>", lambda e: self.on_frame_padding_change())
+        self.frame_padding_opt.bind("<Return>", lambda e: self.on_frame_padding_change())
 
         ### Text Padding
         n_row += 1
@@ -299,9 +334,10 @@ class App(ctk.CTk):
         self.text_padding_label.grid(row=n_row, column=0, padx=(10, padx_left_labels), pady=10, sticky="w")
 
         self.text_padding_opt = ctk.CTkEntry(self.settings_frame)
-        self.text_padding_opt.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="w")
-
+        self.text_padding_opt.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="e")
         self.text_padding_opt.insert('end', self.settings["frame_padding"])
+        self.text_padding_opt.bind("<FocusOut>", lambda e: self.on_text_padding_change())
+        self.text_padding_opt.bind("<Return>", lambda e: self.on_text_padding_change())
 
         ### Desktop Wallpaper Path
         n_row += 1
@@ -309,47 +345,41 @@ class App(ctk.CTk):
         self.desktop_wallpaper_dir_label.grid(row=n_row, column=0, padx=(10, padx_left_labels), pady=10, sticky="w")
 
         self.desktop_wallpaper_dir_button = ctk.CTkButton(self.settings_frame, text="Change Wallpaper", command=self.ChangeWallpaper)
-        self.desktop_wallpaper_dir_button.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="w")
+        self.desktop_wallpaper_dir_button.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="e")
 
-        self.desktop_wallpaper_dir_opt = ctk.CTkEntry(self.settings_frame)
-        self.desktop_wallpaper_dir_opt.grid(row=n_row+1, column=0, columnspan =2, padx=(10,10), pady=(0,10), sticky="ew")
+        self.desktop_wallpaper_dir_opt = ctk.CTkEntry(self.settings_frame, border_width = 0, bg_color = "transparent")
+        self.desktop_wallpaper_dir_opt.grid(row=n_row+1, column=0, columnspan =2, padx=(10,10), pady=(10,10), sticky="ew")
         
         self.desktop_wallpaper_dir_opt.insert('end', self.settings["desktop_wallpaper"])
-
-        n_row += 2
-        self.desktop_wallpaper_dir_label = ctk.CTkLabel(self.settings_frame, text="Current Desktop Wallpaper:")
-        self.desktop_wallpaper_dir_label.grid(row=n_row, column=0, padx=(10, padx_left_labels), pady=5, sticky="w")
-
-        ctk_img = ctk.CTkImage(light_image=img, dark_image=img, size = (340,200))
-        self.desktop_wallpaper_image = ctk.CTkLabel(self.settings_frame, text="", image = ctk_img)
-        self.desktop_wallpaper_image.grid(row=n_row+1, column=0, columnspan =2, padx=(10,10), pady=(0,10), sticky="ew")
-
         
-
-        # ### History File Directory
+        # ### Current Desktop Wallpaper
         # n_row += 2
-        # self.histroy_file_dir_label = ctk.CTkLabel(self.settings_frame, text="History File Directory:")
-        # self.histroy_file_dir_label.grid(row=n_row, column=0, padx=(10, padx_left_labels), pady=10, sticky="w")
+        # self.desktop_wallpaper_dir_label = ctk.CTkLabel(self.settings_frame, text="Current Desktop Wallpaper:")
+        # self.desktop_wallpaper_dir_label.grid(row=n_row, column=0, padx=(10, padx_left_labels), pady=5, sticky="w")
 
-        # self.histroy_file_dir_button = ctk.CTkButton(self.settings_frame, text="Browse", command=self.HistoryFileDirectory)
-        # self.histroy_file_dir_button.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="w")
+        # ctk_img = ctk.CTkImage(light_image=img, dark_image=img, size = (340,200))
+        # self.desktop_wallpaper_image = ctk.CTkLabel(self.settings_frame, text="", image = ctk_img)
+        # self.desktop_wallpaper_image.grid(row=n_row+1, column=0, columnspan =2, padx=(10,10), pady=(0,10), sticky="ew")
 
-        # self.histroy_file_dir_opt = ctk.CTkEntry(self.settings_frame)
-        # self.histroy_file_dir_opt.grid(row=n_row+1, column=0, columnspan =2, padx=(10,10), pady=(0,10), sticky="ew")
+        ### Check for updates
+        n_row += 2
+        self.current_version_label = ctk.CTkLabel(self.settings_frame, text=f"Current Version: {self.VERSION}")
+        self.current_version_label.grid(row=n_row, column=0, padx=(10, padx_left_labels), pady=10, sticky="w")
 
-        # self.histroy_file_dir_opt.insert('end', f'{os.getcwd()}\history.txt')
+        self.check_update_opt = ctk.CTkButton(self.settings_frame, text="Check For Updates", command=self.CheckUpdates)
+        self.check_update_opt.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="e")
 
         ## Reset Settings Button
         n_row += 3
         self.settings_frame.grid_columnconfigure(n_row, weight=1)
-        self.history_reset_button = ctk.CTkButton(self.settings_frame,text="Reset Settings" ,command=self.ResetSettings)
-        self.history_reset_button.grid(row=n_row, column=0, columnspan=2, padx=(10, 10), pady=(20, 5), sticky="ew")
+        self.reset_settings_button = ctk.CTkButton(self.settings_frame,text="Reset Settings" ,command=self.ResetSettings)
+        self.reset_settings_button.grid(row=n_row, column=0, columnspan=2, padx=(10, 10), pady=(50, 5), sticky="ew")
 
         ## Delete Data Button
         n_row += 1
         self.settings_frame.grid_columnconfigure(n_row, weight=1)
-        self.history_reset_button = ctk.CTkButton(self.settings_frame,text="Delete App Data" , hover_color= "darkred",  command=self.DeleAllData)
-        self.history_reset_button.grid(row=n_row, column=0, columnspan=2, padx=(10, 10), pady=(5, 10), sticky="ew")
+        self.delete_all_data_button = ctk.CTkButton(self.settings_frame,text="Delete App Data" , hover_color= "darkred",  command=self.DeleAllData)
+        self.delete_all_data_button.grid(row=n_row, column=0, columnspan=2, padx=(10, 10), pady=(5, 10), sticky="ew")
 
         # --------------------------------------------------
         #       History Frame
@@ -361,9 +391,11 @@ class App(ctk.CTk):
         self.history_frame.grid_rowconfigure(2, weight=1)
         self.history_frame.grid_columnconfigure(0, weight=1)
 
+
+
         # Label
-        self.history_label = ctk.CTkLabel(self.history_frame, text="History", font=ctk.CTkFont(size=20, weight="bold"))
-        self.history_label.grid(row=0, column=0, columnspan=2, padx=(10, 10), pady=(20,10), sticky="w")
+        self.history_page_title = ctk.CTkLabel(self.history_frame, text="History", font=ctk.CTkFont(size=20, weight="bold"))
+        self.history_page_title.grid(row=0, column=0, columnspan=2, padx=(10, 10), pady=(20,10), sticky="w")
 
         # Label
         self.history_label = ctk.CTkLabel(self.history_frame, text=f"History file size: {fn.FileSize(self.history_file)}")
@@ -382,53 +414,6 @@ class App(ctk.CTk):
         self.history_reset_button = ctk.CTkButton(self.history_frame,text="Delete History" ,command=self.DeleteHistory)
         self.history_reset_button.grid(row=3, column=0, columnspan=2, padx=(10, 10), pady=(0, 10), sticky="ew")
 
-        # --------------------------------------------------
-        #       Console Frame
-        # --------------------------------------------------
-
-        # create the console frame
-        self.console_frame = ctk.CTkFrame(self, corner_radius=0, border_width=0, fg_color="transparent")
-        self.console_frame.grid_rowconfigure(2, weight=1)
-        self.console_frame.grid_columnconfigure(0, weight=1)
-        self.console_frame.grid_columnconfigure(1, weight=0)
-
-        # Label
-        self.console_label = ctk.CTkLabel(self.console_frame, text="Console", font=ctk.CTkFont(size=20, weight="bold"))
-        self.console_label.grid(row=0, column=0, padx=(10, 10), pady=(20,10), sticky="w")
-
-        # Text box
-        self.console_textbox = ctk.CTkTextbox(self.console_frame, font=ctk.CTkFont(size=12))
-        self.console_textbox.grid(row=2, column=0, columnspan=2, pady=(0, 5), padx=(10, 10), sticky="nsew")
-
-        ## Uploading Information to the Console
-        self.console_textbox.insert('0.0', f"● Operating System:\n  --->  {platform.system()}\n\n")
-        self.console_textbox.insert('end', f"● Desktop Wallpaper Location:\n  --->  {self.desktop_wallpaper_dir_opt.get()}\n\n")
-        self.console_textbox.insert('end', f"● Desktop Wallpaper Image Size (using Pillow):\n  ---> {img_w}(w) * {img_h}(h)\n\n")
-        self.console_textbox.insert('end', f"● Suggested Text Font Size for TDL:\n  ---> {int((img_w + img_h)/2 * 0.03/1.333)}\n\n")
-        self.console_textbox.insert('end', f"● Existing Fonts For Chinese Language Support:\n  ---> Simfang, Simhei, Simkai\n\n")
-        self.console_textbox.configure(state="disabled") # Make it read-only for user input
-
-        # Version Information
-        if fn.get_file_content("version.txt") == self.VERSION:
-            update_msg = f"Latest Version Avaliable: {fn.get_file_content('version.txt')} (Up to date)"
-        else :
-            update_msg = f"Latest Version Avaliable: {fn.get_file_content('version.txt')} (New update avaliable!)"
-
-        self.text_padding_label = ctk.CTkLabel(self.console_frame, text=update_msg)
-        self.text_padding_label.grid(row=3, column=0, padx=(10, 10), pady=(0,10), sticky="w")
-
-        # Messages
-        self.rights = ctk.CTkLabel(self.console_frame, text="© 2025 Desktop TDL. All rights reserved.", font=ctk.CTkFont(size=12, weight="bold"))
-        self.rights.grid(row=4, column=0, padx=(10, 10), pady=0, sticky="w")
-
-        self.messages = ctk.CTkLabel(self.console_frame, text="Visit us at:  ammelsayed.github.io\\projects\DesktopTDL", font=ctk.CTkFont(size=12))
-        self.messages.grid(row=5, column=0, padx=(10, 10), pady=(0,10), sticky="w")
-
-        # Bind left mouse click to open the URL
-        self.messages.bind("<Button-1>", lambda event: webbrowser.open("https://ammelsayed.github.io/projects/DesktopTDL/"))
-        self.messages.bind("<Enter>", lambda event: self.messages.configure(cursor="hand2"))
-        self.messages.bind("<Leave>", lambda event: self.messages.configure(cursor=""))
-
 
         # --------------------------------------------------
         #       Starting The APP
@@ -437,13 +422,17 @@ class App(ctk.CTk):
         # Initially show the To Do List frame
         self.show_frame(self.main_frame)
 
+        if self.settings["Theme"] not in ["Blue", "Dark Blue", "Green"]:
+            self.change_theme_event(self.settings["Theme"])
+        else: pass
+
+        self.update_texts()
 
     ### Frame Settings
     def show_frame(self, frame):
         self.main_frame.grid_remove()
         self.settings_frame.grid_remove()
         self.history_frame.grid_remove()
-        self.console_frame.grid_remove()
         frame.grid(row=0, column=1, rowspan=4, sticky="nsew")
 
     def ToDoListsPage(self):
@@ -454,10 +443,231 @@ class App(ctk.CTk):
     
     def HistoryPage(self):
         self.show_frame(self.history_frame)
+
+    def change_appearance_mode_event(self, new_appearance_mode: str):
+        ctk.set_appearance_mode(new_appearance_mode)
+        self.settings["Apperance Mode"] = new_appearance_mode
+        self.save_settings()
     
-    def ConsolePage(self):
-        self.show_frame(self.console_frame)
+    def change_scaling_event(self, new_scaling: str):
+        new_scaling_float = int(new_scaling.replace("%", "")) / 100
+        ctk.set_widget_scaling(new_scaling_float)
+        self.settings["UI Scaling"] = new_scaling
+        self.save_settings()
     
+    def change_theme_event(self, new_theme: str):
+        self.settings["Theme"] = new_theme
+        self.update_widget_colors(new_theme)
+        self.save_settings()
+
+    def update_widget_colors(self, new_theme):
+                
+            def update_widget_recursive(widget):
+
+                if isinstance(widget, ctk.CTkButton):
+                    widget.configure(
+                        fg_color = ThemeOptions[new_theme]["button_fg_color"],
+                        hover_color = ThemeOptions[new_theme]["button_hover_color"],
+                        
+                    )
+                
+                elif isinstance(widget, ctk.CTkOptionMenu):
+                    widget.configure(
+                        fg_color = ThemeOptions[new_theme]["button_fg_color"],
+                        button_color = ThemeOptions[new_theme]["button_hover_color"],
+                        button_hover_color = ThemeOptions[new_theme]["optionmenu_button_hover_color"],
+                    )
+
+                # Recursively update children
+                for child in widget.winfo_children():
+                    update_widget_recursive(child)
+
+            # Update main window (only buttons and optionmenus, so no need for fg_color here unless it's a button-like)
+            
+            # Update all children
+            for widget in self.winfo_children():
+                update_widget_recursive(widget)
+    
+    ### Language Settings
+
+    def change_language_event(self, new_language: str):
+        self.current_language = new_language
+        self.settings["Language"] = new_language
+        self.save_settings()
+        self.update_texts()
+
+    def get_text(self, key) -> str:
+        """
+        Return the text for current language and fallback to English or the key.
+        """
+        lang = getattr(self, "current_language", self.settings.get("Language", "English"))
+        # try language first
+        if lang in translations and key in translations[lang]:
+            return translations[lang][key]
+        # fallback to English
+        if "English" in translations and key in translations["English"]:
+            return translations["English"][key]
+        # final fallback
+        return key
+
+    def update_texts(self):
+        """
+        Update all widgets' visible text to the current language.
+        Safe to call at any time; uses try/except around each widget so missing widgets
+        don't break the update flow.
+        """
+
+        ## sidebar buttons
+        try:
+            self.sidebar_button_1.configure(text=self.get_text("todo_list"))
+        except Exception:
+            pass
+        try:
+            self.sidebar_button_2.configure(text=self.get_text("settings"))
+        except Exception:
+            pass
+        try:
+            self.sidebar_button_3.configure(text=self.get_text("history"))
+        except Exception:
+            pass
+
+        ## Main Frame
+
+        try:
+            self.text_label.configure(text=self.get_text("write_tdl"))
+        except Exception:
+            pass
+
+        try:
+            self.clear_button.configure(text=self.get_text("clear"))
+        except Exception:
+            pass
+        try:
+            self.save_button.configure(text=self.get_text("add_to_desktop"))
+        except Exception:
+            pass
+
+        try:
+            self.reset_button.configure(text=self.get_text("remove_from_desktop"))
+        except Exception:
+            pass
+
+        ## Settings frame
+
+        try:
+            self.settings_frame_title.configure(text=self.get_text("settings"))
+        except Exception:
+            pass
+
+        try:
+            self.language_label.configure(text=self.get_text("language"))
+        except Exception:
+            pass
+
+        try:
+            self.appearance_mode_label.configure(text=self.get_text("appearance_mode"))
+        except Exception:
+            pass
+
+        try:
+            self.ui_scaling_label.configure(text=self.get_text("ui_scaling"))
+        except Exception:
+            pass
+
+        try:
+            self.theme_label.configure(text=self.get_text("theme"))
+        except Exception:
+            pass
+
+        try:
+            self.font_label.configure(text=self.get_text("font"))
+        except Exception:
+            pass
+
+        try:
+            self.font_size_label.configure(text=self.get_text("font_size"))
+        except Exception:
+            pass
+
+        try:
+            self.textbox_font_size_label.configure(text=self.get_text("textbox_font_size"))
+        except Exception:
+            pass
+
+        try:
+            self.position_label.configure(text=self.get_text("position"))
+        except Exception:
+            pass
+
+        try:
+            self.text_color_label.configure(text=self.get_text("text_color"))
+        except Exception:
+            pass
+
+        try:
+            self.box_color_label.configure(text=self.get_text("box_color"))
+        except Exception:
+            pass
+
+        try:
+            self.frame_padding_label.configure(text=self.get_text("text_box_padding"))
+        except Exception:
+            pass
+
+        try:
+            self.text_padding_label.configure(text=self.get_text("box_frame_padding"))
+        except Exception:
+            pass
+
+        try:
+            self.desktop_wallpaper_dir_label.configure(text=self.get_text("desktop_wallpaper"))
+        except Exception:
+            pass
+
+        try:
+            self.desktop_wallpaper_dir_button.configure(text=self.get_text("change_wallpaper"))
+        except Exception:
+            pass
+
+        try:
+            self.current_version_label.configure(text=self.get_text("current_version").format(version=self.VERSION))
+        except Exception:
+            pass
+
+        try:
+            self.check_update_opt.configure(text=self.get_text("check_updates"))
+        except Exception:
+            pass
+
+        try:
+            self.reset_settings_button.configure(text=self.get_text("reset_settings"))
+        except Exception:
+            pass
+
+        try:
+            self.delete_all_data_button.configure(text=self.get_text("delete_data"))
+        except Exception:
+            pass
+
+
+        # History frame labels
+        try:
+            self.history_page_title.configure(text=self.get_text("history"))
+        except Exception:
+            pass
+
+        try:
+            size_text = self.get_text("history_file_size").format(size=fn.FileSize(self.history_file))
+            self.history_label.configure(text=size_text)
+        except Exception:
+            pass
+
+        try:
+            self.history_reset_button.configure(text=self.get_text("delete_history"))
+        except Exception:
+            pass
+
+
     ### Read Settings
     def load_settings(self):
         if os.path.exists(self.settings_file):
@@ -579,234 +789,77 @@ class App(ctk.CTk):
 
     ### Updating Settings
 
-    def change_appearance_mode_event(self, new_appearance_mode: str):
-        ctk.set_appearance_mode(new_appearance_mode)
-        self.settings["Apperance Mode"] = new_appearance_mode
-        self.save_settings()
-    
-    def change_scaling_event(self, new_scaling: str):
-        new_scaling_float = int(new_scaling.replace("%", "")) / 100
-        ctk.set_widget_scaling(new_scaling_float)
-        self.settings["UI Scaling"] = new_scaling
-        self.save_settings()
-    
-    def change_theme_event(self, new_theme: str):
-        self.settings["Theme"] = new_theme
-        ctk.set_default_color_theme(ThemeOptions[new_theme])
+    def change_font_event(self, new_font: str):
+        """Called when user selects a new font from the OptionMenu."""
+        self.settings["font"] = new_font
         self.save_settings()
 
-        ## Old Method close and reopen
+    def on_font_size_change(self):
+        """Validate and save the global font size used for drawing on desktop."""
+        val = self.font_size_opt.get().strip()
+        if val == "":
+            return
+        try:
+            v = int(val)
+            self.settings["font size"] = v
+            self.save_settings()
+        except ValueError:
+            messagebox.showerror("Invalid Value", "Font size must be an integer.")
+            # revert entry to saved value
+            self.font_size_opt.delete(0, "end")
+            self.font_size_opt.insert("end", str(self.settings.get("font size", "")))
 
-        ## New method: Auto-update the colors
-        # self.update_widget_colors()
-        # # App default themes
-        # self.sidebar_frame.configure(corner_radius=0, border_width=0, fg_color="transparent")
-        # self.main_frame.configure(corner_radius=0, border_width=0, fg_color="transparent")
-        # self.settings_frame.configure(corner_radius=0, border_width=0, fg_color="transparent")
-        # self.history_frame.configure(corner_radius=0, border_width=0, fg_color="transparent")
-        # self.console_frame.configure(corner_radius=0, border_width=0, fg_color="transparent")
+    def on_textbox_font_size_change(self):
+        """Apply and save the app textbox font size."""
+        val = self.textbox_font_size_opt.get().strip()
+        if val == "":
+            return
+        try:
+            v = int(val)
+            self.settings["textbox_fontsize"] = v
+            # apply immediately to textbox
+            try:
+                self.textbox.configure(font=ctk.CTkFont(size=v))
+            except Exception:
+                pass
+            self.save_settings()
+        except ValueError:
+            messagebox.showerror("Invalid Value", "Textbox font size must be an integer.")
+            self.textbox_font_size_opt.delete(0, "end")
+            self.textbox_font_size_opt.insert("end", str(self.settings.get("textbox_fontsize", 14)))
 
-    # def update_widget_colors(self):
-    #     # Pick correct color for light/dark mode if it's a list
+    def change_position_event(self, new_position: str):
+        """Save desktop text position selection."""
+        self.settings["position"] = new_position
+        self.save_settings()
 
-    #     def pick_color(value):
-    #         if isinstance(value, list) and len(value) == 2:
-    #             return value[0] if ctk.get_appearance_mode() == "Light" else value[1]
-    #         return value
+    def on_frame_padding_change(self):
+        """Save Text-Box Padding (frame padding)."""
+        val = self.frame_padding_opt.get().strip()
+        if val == "":
+            return
+        try:
+            v = int(val)
+            self.settings["text_padding"] = str(v)   # keep same type as your defaults (strings)
+            self.save_settings()
+        except ValueError:
+            messagebox.showerror("Invalid Value", "Text-Box Padding must be an integer.")
+            self.frame_padding_opt.delete(0, "end")
+            self.frame_padding_opt.insert("end", str(self.settings.get("text_padding", "30")))
 
-    #     def update_widget_recursive(widget):
-
-    #         if isinstance(widget, ctk.CTk):
-    #             widget.configure(
-    #                 fg_color=pick_color(ctk.ThemeManager.theme["CTkFrame"]["fg_color"])
-    #             )
-            
-    #         if isinstance(widget, ctk.CTkToplevel):
-    #             widget.configure(
-    #                 fg_color=pick_color(ctk.ThemeManager.theme["CTkFrame"]["fg_color"])
-    #             )
-
-    #         # ---- CTkFrame ----
-    #         if isinstance(widget, ctk.CTkFrame):
-    #             widget.configure(
-    #                 corner_radius=ctk.ThemeManager.theme["CTkFrame"]["corner_radius"],
-    #                 border_width=ctk.ThemeManager.theme["CTkFrame"]["border_width"],
-    #                 fg_color=pick_color(ctk.ThemeManager.theme["CTkFrame"]["fg_color"]),
-    #                 border_color=pick_color(ctk.ThemeManager.theme["CTkFrame"]["border_color"]),
-    #             )
-
-    #         # ---- CTkButton ----
-    #         elif isinstance(widget, ctk.CTkButton):
-    #             widget.configure(
-    #                 corner_radius=ctk.ThemeManager.theme["CTkButton"]["corner_radius"],
-    #                 border_width=ctk.ThemeManager.theme["CTkButton"]["border_width"],
-    #                 fg_color=pick_color(ctk.ThemeManager.theme["CTkButton"]["fg_color"]),
-    #                 hover_color=pick_color(ctk.ThemeManager.theme["CTkButton"]["hover_color"]),
-    #                 border_color=pick_color(ctk.ThemeManager.theme["CTkButton"]["border_color"]),
-    #                 text_color=pick_color(ctk.ThemeManager.theme["CTkButton"]["text_color"]),
-                     
-    #             )
-            
-    #         # ---- CTkLabel ----
-    #         elif isinstance(widget, ctk.CTkLabel):
-    #             widget.configure(
-    #                 corner_radius=ctk.ThemeManager.theme["CTkLabel"]["corner_radius"],
-    #                 fg_color=pick_color(ctk.ThemeManager.theme["CTkLabel"]["fg_color"]),
-    #                 text_color=pick_color(ctk.ThemeManager.theme["CTkLabel"]["text_color"]),
-    #             )
-
-    #         # ---- CTkEntry ----
-    #         elif isinstance(widget, ctk.CTkEntry):
-    #             widget.configure(
-    #                 corner_radius=ctk.ThemeManager.theme["CTkEntry"]["corner_radius"],
-    #                 border_width=ctk.ThemeManager.theme["CTkEntry"]["border_width"],
-    #                 fg_color=pick_color(ctk.ThemeManager.theme["CTkEntry"]["fg_color"]),
-    #                 border_color=pick_color(ctk.ThemeManager.theme["CTkEntry"]["border_color"]),
-    #                 text_color=pick_color(ctk.ThemeManager.theme["CTkEntry"]["text_color"]),
-    #                 placeholder_text_color=pick_color(ctk.ThemeManager.theme["CTkEntry"]["placeholder_text_color"]),
-    #             )
-
-    #         # ---- CTkCheckBox ----
-    #         elif isinstance(widget, ctk.CTkCheckBox):
-    #             widget.configure(
-    #                 corner_radius=ctk.ThemeManager.theme["CTkCheckBox"]["corner_radius"],
-    #                 border_width=ctk.ThemeManager.theme["CTkCheckBox"]["border_width"],
-    #                 fg_color=pick_color(ctk.ThemeManager.theme["CTkCheckBox"]["fg_color"]),
-    #                 border_color=pick_color(ctk.ThemeManager.theme["CTkCheckBox"]["border_color"]),
-    #                 hover_color=pick_color(ctk.ThemeManager.theme["CTkCheckBox"]["hover_color"]),
-    #                 checkmark_color=pick_color(ctk.ThemeManager.theme["CTkCheckBox"]["checkmark_color"]),
-    #                 text_color=pick_color(ctk.ThemeManager.theme["CTkCheckBox"]["text_color"]),
-    #             )
-
-    #         # ---- CTkSwitch ----
-    #         elif isinstance(widget, ctk.CTkSwitch):
-    #             widget.configure(
-    #                 corner_radius=ctk.ThemeManager.theme["CTkSwitch"]["corner_radius"],
-    #                 border_width=ctk.ThemeManager.theme["CTkSwitch"]["border_width"],
-    #                 button_length=ctk.ThemeManager.theme["CTkSwitch"]["button_length"],
-    #                 fg_color=pick_color(ctk.ThemeManager.theme["CTkSwitch"]["fg_color"]),
-    #                 progress_color=pick_color(ctk.ThemeManager.theme["CTkSwitch"]["progress_color"]),
-    #                 button_color=pick_color(ctk.ThemeManager.theme["CTkSwitch"]["button_color"]),
-    #                 button_hover_color=pick_color(ctk.ThemeManager.theme["CTkSwitch"]["button_hover_color"]),
-    #                 text_color=pick_color(ctk.ThemeManager.theme["CTkSwitch"]["text_color"]),
-    #             )
-
-    #         # ---- CTkRadioButton ----
-    #         elif isinstance(widget, ctk.CTkRadioButton):
-    #             widget.configure(
-    #                 corner_radius=ctk.ThemeManager.theme["CTkRadioButton"]["corner_radius"],
-    #                 border_width_checked=ctk.ThemeManager.theme["CTkRadioButton"]["border_width_checked"],
-    #                 border_width_unchecked=ctk.ThemeManager.theme["CTkRadioButton"]["border_width_unchecked"],
-    #                 fg_color=pick_color(ctk.ThemeManager.theme["CTkRadioButton"]["fg_color"]),
-    #                 border_color=pick_color(ctk.ThemeManager.theme["CTkRadioButton"]["border_color"]),
-    #                 hover_color=pick_color(ctk.ThemeManager.theme["CTkRadioButton"]["hover_color"]),
-    #                 text_color=pick_color(ctk.ThemeManager.theme["CTkRadioButton"]["text_color"]),
-    #             )
-
-    #         # ---- CTkProgressBar ----
-    #         elif isinstance(widget, ctk.CTkProgressBar):
-    #             widget.configure(
-    #                 corner_radius=ctk.ThemeManager.theme["CTkProgressBar"]["corner_radius"],
-    #                 border_width=ctk.ThemeManager.theme["CTkProgressBar"]["border_width"],
-    #                 fg_color=pick_color(ctk.ThemeManager.theme["CTkProgressBar"]["fg_color"]),
-    #                 progress_color=pick_color(ctk.ThemeManager.theme["CTkProgressBar"]["progress_color"]),
-    #                 border_color=pick_color(ctk.ThemeManager.theme["CTkProgressBar"]["border_color"]),
-    #             )
-
-    #         # ---- CTkSlider ----
-    #         elif isinstance(widget, ctk.CTkSlider):
-    #             widget.configure(
-    #                 corner_radius=ctk.ThemeManager.theme["CTkSlider"]["corner_radius"],
-    #                 button_corner_radius=ctk.ThemeManager.theme["CTkSlider"]["button_corner_radius"],
-    #                 border_width=ctk.ThemeManager.theme["CTkSlider"]["border_width"],
-    #                 button_length=ctk.ThemeManager.theme["CTkSlider"]["button_length"],
-    #                 fg_color=pick_color(ctk.ThemeManager.theme["CTkSlider"]["fg_color"]),
-    #                 progress_color=pick_color(ctk.ThemeManager.theme["CTkSlider"]["progress_color"]),
-    #                 button_color=pick_color(ctk.ThemeManager.theme["CTkSlider"]["button_color"]),
-    #                 button_hover_color=pick_color(ctk.ThemeManager.theme["CTkSlider"]["button_hover_color"]),
-    #             )
-
-    #         # ---- CTkOptionMenu ----
-    #         elif isinstance(widget, ctk.CTkOptionMenu):
-    #             widget.configure(
-    #                 corner_radius=ctk.ThemeManager.theme["CTkOptionMenu"]["corner_radius"],
-    #                 fg_color=pick_color(ctk.ThemeManager.theme["CTkOptionMenu"]["fg_color"]),
-    #                 button_color=pick_color(ctk.ThemeManager.theme["CTkOptionMenu"]["button_color"]),
-    #                 button_hover_color=pick_color(ctk.ThemeManager.theme["CTkOptionMenu"]["button_hover_color"]),
-    #                 text_color=pick_color(ctk.ThemeManager.theme["CTkOptionMenu"]["text_color"]),
-    #             )
-    #             # Dropdown menu
-    #             if hasattr(widget, "dropdown_menu") and widget.dropdown_menu:
-    #                 widget.dropdown_menu.configure(
-    #                     fg_color=pick_color(ctk.ThemeManager.theme["DropdownMenu"]["fg_color"]),
-    #                     hover_color=pick_color(ctk.ThemeManager.theme["DropdownMenu"]["hover_color"]),
-    #                     text_color=pick_color(ctk.ThemeManager.theme["DropdownMenu"]["text_color"]),
-    #                 )
-
-    #         # ---- CTkComboBox ----
-    #         elif isinstance(widget, ctk.CTkComboBox):
-    #             widget.configure(
-    #                 corner_radius=ctk.ThemeManager.theme["CTkComboBox"]["corner_radius"],
-    #                 border_width=ctk.ThemeManager.theme["CTkComboBox"]["border_width"],
-    #                 fg_color=pick_color(ctk.ThemeManager.theme["CTkComboBox"]["fg_color"]),
-    #                 border_color=pick_color(ctk.ThemeManager.theme["CTkComboBox"]["border_color"]),
-    #                 button_color=pick_color(ctk.ThemeManager.theme["CTkComboBox"]["button_color"]),
-    #                 button_hover_color=pick_color(ctk.ThemeManager.theme["CTkComboBox"]["button_hover_color"]),
-    #                 text_color=pick_color(ctk.ThemeManager.theme["CTkComboBox"]["text_color"]),
-    #             )
-
-    #         # ---- CTkScrollbar ----
-    #         elif isinstance(widget, ctk.CTkScrollbar):
-    #             widget.configure(
-    #                 corner_radius=ctk.ThemeManager.theme["CTkScrollbar"]["corner_radius"],
-    #                 border_spacing=ctk.ThemeManager.theme["CTkScrollbar"]["border_spacing"],
-    #                 fg_color=pick_color(ctk.ThemeManager.theme["CTkScrollbar"]["fg_color"]),
-    #                 button_color=pick_color(ctk.ThemeManager.theme["CTkScrollbar"]["button_color"]),
-    #                 button_hover_color=pick_color(ctk.ThemeManager.theme["CTkScrollbar"]["button_hover_color"]),
-    #             )
-
-    #         # ---- CTkSegmentedButton ----
-    #         elif isinstance(widget, ctk.CTkSegmentedButton):
-    #             widget.configure(
-    #                 corner_radius=ctk.ThemeManager.theme["CTkSegmentedButton"]["corner_radius"],
-    #                 border_width=ctk.ThemeManager.theme["CTkSegmentedButton"]["border_width"],
-    #                 fg_color=pick_color(ctk.ThemeManager.theme["CTkSegmentedButton"]["fg_color"]),
-    #                 selected_color=pick_color(ctk.ThemeManager.theme["CTkSegmentedButton"]["selected_color"]),
-    #                 selected_hover_color=pick_color(ctk.ThemeManager.theme["CTkSegmentedButton"]["selected_hover_color"]),
-    #                 unselected_color=pick_color(ctk.ThemeManager.theme["CTkSegmentedButton"]["unselected_color"]),
-    #                 unselected_hover_color=pick_color(ctk.ThemeManager.theme["CTkSegmentedButton"]["unselected_hover_color"]),
-    #                 text_color=pick_color(ctk.ThemeManager.theme["CTkSegmentedButton"]["text_color"]),
-    #             )
-
-    #         # ---- CTkTextbox ----
-    #         elif isinstance(widget, ctk.CTkTextbox):
-    #             widget.configure(
-    #                 corner_radius=ctk.ThemeManager.theme["CTkTextbox"]["corner_radius"],
-    #                 border_width=ctk.ThemeManager.theme["CTkTextbox"]["border_width"],
-    #                 fg_color=pick_color(ctk.ThemeManager.theme["CTkTextbox"]["fg_color"]),
-    #                 border_color=pick_color(ctk.ThemeManager.theme["CTkTextbox"]["border_color"]),
-    #                 text_color=pick_color(ctk.ThemeManager.theme["CTkTextbox"]["text_color"]),
-    #                 scrollbar_button_color=pick_color(ctk.ThemeManager.theme["CTkTextbox"]["scrollbar_button_color"]),
-    #                 scrollbar_button_hover_color=pick_color(ctk.ThemeManager.theme["CTkTextbox"]["scrollbar_button_hover_color"]),
-    #             )
-
-    #         # ---- CTkScrollableFrame ----
-    #         elif isinstance(widget, ctk.CTkScrollableFrame):
-    #             widget.configure(
-    #                 label_fg_color=pick_color(ctk.ThemeManager.theme["CTkScrollableFrame"]["label_fg_color"]),
-    #             )
-
-    #         # Recursively update children
-    #         for child in widget.winfo_children():
-    #             update_widget_recursive(child)
-
-    #     # Update main window
-    #     self.configure(fg_color=pick_color(ctk.ThemeManager.theme["CTk"]["fg_color"]))
-
-    #     # Update all children
-    #     for widget in self.winfo_children():
-    #         update_widget_recursive(widget)
-
+    def on_text_padding_change(self):
+        """Save Box-Frame Padding (text padding)."""
+        val = self.text_padding_opt.get().strip()
+        if val == "":
+            return
+        try:
+            v = int(val)
+            self.settings["frame_padding"] = str(v)
+            self.save_settings()
+        except ValueError:
+            messagebox.showerror("Invalid Value", "Box-Frame Padding must be an integer.")
+            self.text_padding_opt.delete(0, "end")
+            self.text_padding_opt.insert("end", str(self.settings.get("frame_padding", "80")))
 
     def choose_text_color(self):
         global text_color
@@ -848,15 +901,6 @@ class App(ctk.CTk):
 
             self.font_size_opt.delete(0, "end")
             self.font_size_opt.insert('end',int((img_w + img_h)/2 * 0.03/1.333))
-
-            self.console_textbox.configure(state="normal")
-            self.console_textbox.delete("1.0", "end")
-            self.console_textbox.insert('0.0', f"● Operating System:\n  --->  {platform.system()}\n\n")
-            self.console_textbox.insert('end', f"● Desktop Wallpaper Location:\n  --->  {file_path}\n\n")
-            self.console_textbox.insert('end', f"● Desktop Wallpaper Image Size (using Pillow):\n  ---> {img_w}(w) * {img_h}(h)\n\n")
-            self.console_textbox.insert('end', f"● Suggested Text Font Size for TDL:\n  ---> {int((img_w + img_h)/2 * 0.03/1.333)}\n\n")
-            self.console_textbox.insert('end', f"● Existing Fonts For Chinese Language Support:\n  ---> Simfang, Simhei, Simkai\n\n")
-            self.console_textbox.configure(state="disabled") # Make it read-only for user input
 
 
             self.save_settings()
@@ -958,9 +1002,78 @@ class App(ctk.CTk):
         else:
             # Do nothing if user cancels
             pass
-        
+
+    def CheckUpdates(self):
+        import requests, base64
+        path = "version.txt"
+        branch = "main"
+        api_url = f"https://api.github.com/repos/ammelsayed/Desktop-TDL/contents/{path}?ref={branch}"
+        response = requests.get(api_url)
+        if response.status_code == 200:
+            data = response.json()
+            content = base64.b64decode(data["content"]).decode("utf-8").strip()
+            local_version = tuple(map(int, self.VERSION.split('.')))
+            remote_version = tuple(map(int, content.split('.')))
+            if remote_version > local_version:
+                if messagebox.askyesno("Update Available", f"Latest update available: {content}. Do you wish to update?"):
+                    
+                    from webbrowser import open
+                    open("https://ammelsayed.github.io/projects/DesktopTDL/")
+
+                    # update_url = "https://github.com/ammelsayed/Desktop-TDL/releases/download/1.0.7/DesktopTDL.exe"
+
+                    # import tempfile
+                    # from glob import glob
+                    # from tempfile import gettempdir
+                    # from shutil import copy2
+                    # from subprocess import Popen
+
+                    # try:
+                    #     # 1. Download new exe to a temp file
+                    #     tmp_path = os.path.join(gettempdir(), "DesktopTDL_new.exe")
+                    #     r = requests.get(update_url, stream=True)
+                    #     r.raise_for_status()
+                    #     with open(tmp_path, "wb") as f:
+                    #         for chunk in r.iter_content(chunk_size=8192):
+                    #             f.write(chunk)
+
+                    #     # 2. Find and delete all old DesktopTDL.exe files
+                    #     search_paths = [
+                    #         f"{os.environ.get('LOCALAPPDATA')}\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs",
+                    #     ]
+
+                    #     for path in search_paths:
+                    #         if os.path.exists(path):
+                    #             for file in glob.glob(path + "\\**\\DesktopTDL.exe", recursive=True):
+                    #                 try:
+                    #                     if os.path.samefile(file, sys.executable):
+                    #                         continue  # don't delete the running one
+                    #                     os.remove(file)
+                    #                 except Exception:
+                    #                     pass
+
+                    #     # 3. Copy the new exe to replace the running one
+                    #     new_path = os.path.join(os.path.dirname(sys.executable), "DesktopTDL.exe")
+                    #     copy2(tmp_path, new_path)
+
+                    #     # 4. Start the new exe
+                    #     Popen([new_path])
+
+                    #     # 5. Exit current app
+                    #     self.destroy()
+                    #     sys.exit(0)
+
+                    # except Exception as e:
+                    #     import tkinter.messagebox as messagebox
+                    #     messagebox.showerror("Update Failed", f"Error while updating: {str(e)}")
+
+            else:
+                messagebox.showinfo("Up to Date", f"You are running the latest version: {self.VERSION}")
+        else:
+            messagebox.showerror("Error", f"Failed to check for updates: Error {response.status_code}")
+
+  
 
 if __name__ == "__main__":
     app = App()
-
     app.mainloop()
