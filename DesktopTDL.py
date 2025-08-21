@@ -6,60 +6,93 @@ import tkinter.messagebox as messagebox
 import tkinter.filedialog as filedialog
 import datetime
 import functions as fn
+from cv2 import imread
 from PIL import Image, ImageTk  
 
 # Importing Dictonaries
-from directories import WindowsFonts, ThemeOptions
-from translations import translations
+from themes import ThemeOptions
+from translations import translations, LanguageOptions
 
-LanguageOptions = {
+def FontsFinder():
 
-    "English": "English",
-    "简体中文": "Simplified Chinese",
-    "繁體中文": "Traditional Chinese",
-    "Bahasa Indonesia": "Indonesian",
-    "Bahasa Melayu": "Malay",
-    "Español": "Spanish",
-    "한국어": "Korean",
-    "Italiano": "Italian",
-    "日本語": "Japanese",
-    "Português": "Portuguese",
-    "Русский": "Russian",
-    "ไทย": "Thai",
-    "Tiếng Việt": "Vietnamese",
-    "العربية": "Arabic",
-    "Türkçe": "Turkish",
-    "Deutsch": "German",
-    "Français": "French"
-}
+    if sys.platform.startswith("win"):
+        from PIL_CV2 import WindowsFonts
+        return WindowsFonts
 
+    elif sys.platform.startswith("linux"):
+        from PIL_CV2 import DebianUbuntuFonts
+        return DebianUbuntuFonts
+
+    elif algo == "Pillow" or "Pillow + OpenCV" and sys.platform == "darwin":
+        pass
 
 
 class App(ctk.CTk):
     def __init__(self):
+
         super().__init__()
 
-        # configure window
-        self.title("Desktop TDL App")
-        self.geometry("750x600")
-        # self.resizable(False, False)  # prevent user from manually resizing
+        ## --------------------------------------
+        ## Configure window
 
+        self.title("Desktop TDL App")
+        self.geometry("800x600")
+
+        ## --------------------------------------
         ## Icon settings 
-        ## -- load with .png file 
-        # icon_path = "./assets/checklist.png"
-        # if os.path.exists(icon_path):
-        #     self.iconphoto(True,ImageTk.PhotoImage(Image.open(icon_path)))
-        # else: pass
-        ## -- load with .ico file
-        self.iconbitmap("./assets/checklist.ico")
+
+        if sys.platform == "darwin":
+            icon_path = "./assets/checklist.ico"
+            if os.path.exists(icon_path):
+                self.iconbitmap("./assets/checklist.ico")
+            else: pass
+
+        elif sys.platform.startswith("win"):
+            icon_path = "./assets/checklist.ico"
+            if os.path.exists(icon_path):
+                self.iconbitmap("./assets/checklist.ico")
+            else: pass
+
+        elif sys.platform.startswith("linux"):
+            icon_path = "./assets/checklist.png"
+            if os.path.exists(icon_path):
+                self.iconphoto(True,ImageTk.PhotoImage(Image.open(icon_path)))
+            else: pass
+
         
         # configure grid layout (4x4)
+
         self.grid_columnconfigure(1, weight=1)
         self.grid_columnconfigure((2, 3), weight=0)
         self.grid_rowconfigure((0, 1, 2), weight=1)
 
-        ### Default settings
-        
+        ## --------------------------------------
+        ## Create Data Folder 
+
+        if sys.platform == "darwin":
+            pass
+
+        elif sys.platform.startswith("win"):
+            self.data_folder = f"{os.environ.get('LOCALAPPDATA')}\\Desktop TDL"
+            self.sub_files =  f"{self.data_folder}\\"
+
+        elif sys.platform.startswith("linux"):
+            from pathlib import Path
+            self.data_folder = Path.home() / ".local" / "share" / "Desktop_TDL"
+            self.sub_files =  f"{self.data_folder}/"
+
+        os.makedirs(self.data_folder, exist_ok=True)
+
+        ## --------------------------------------
+        ## Create Settinngs file
+
+        self.settings_file = f"{self.sub_files}settings.json"
+
+        if not os.path.exists(self.settings_file):
+            with open(self.settings_file, "w") as f:
+                json.dump({}, f) 
+
+
         self.default_settings = {
             "Language" : "English",
             "Apperance Mode": "Light",
@@ -67,49 +100,33 @@ class App(ctk.CTk):
             "UI Scaling" : "100%",
             "position": "Top Right",
             "font": "Comic",
-            "font size": None,
+            "font size": 14,
+            "line_spacing" : 1,
             "textbox_fontsize" : 14,
-            "text_color": "white",
-            "box_color": "black",
+            "text_color": "#ffffff",
+            "box_color": "#000000",
             "text_padding": "30",
-            "frame_padding": "80",
-            "desktop_wallpaper": fn.get_wallpaper_path()
+            "box_padding": "80",
+            "desktop_wallpaper": fn.get_wallpaper_path(),
         }
 
-        # Need to use a quicker way, much quicker than Pillow....
-        img = Image.open(self.default_settings["desktop_wallpaper"])
-        img_w, img_h = img.size
+        # auto-compute the suggest fonts size for the default settings.
+        img = imread(self.default_settings["desktop_wallpaper"])
+        img_h, img_w = img.shape[:2]
         self.default_settings["font size"] = int((img_w + img_h)/2 * 0.03/1.333)
 
-        ## Manage where data is saved (histroy and settings
-        if sys.platform == "darwin":
-            pass
-
-        elif sys.platform.startswith("win"):
-            self.data_folder = f"{os.environ.get('LOCALAPPDATA')}\\Desktop TDL"
-            os.makedirs(self.data_folder, exist_ok=True) # Ensure folder exists
-            self.settings_file = f"{self.data_folder}\\settings.json"
-            self.history_file = f"{self.data_folder}\\history.txt"
-
-        elif sys.platform.startswith("linux"):
-            from pathlib import Path
-            self.data_folder = Path.home() / ".local" / "share" / "Desktop_TDL"
-            os.makedirs(self.data_folder, exist_ok=True) # Ensure folder exists
-            self.settings_file = f"{self.data_folder}/settings.json"
-            self.history_file = f"{self.data_folder}/history.txt"
-
-        # Create files if missing
-        if not os.path.exists(self.settings_file):
-            with open(self.settings_file, "w") as f:
-                json.dump({}, f) 
         self.settings = self.load_settings()
+
+        ## --------------------------------------
+        ## Create history file
+
+        self.history_file = f"{self.sub_files}history.txt"
 
         if not os.path.exists(self.history_file):
             open(self.history_file, "w").close()  
 
-        # img = Image.open(self.settings["desktop_wallpaper"])
-        # img_w, img_h = img.size
-        # self.settings["font size"] = int((img_w + img_h)/2 * 0.03/1.333)
+        ## --------------------------------------
+        ## Initial Settings
 
         if self.settings["Theme"] in ["Blue", "Dark Blue", "Green"]:
             ctk.set_default_color_theme(self.settings["Theme"].lower().replace(" ", "-"))
@@ -119,8 +136,6 @@ class App(ctk.CTk):
         ctk.set_widget_scaling(int(self.settings["UI Scaling"].replace("%", "")) / 100)
 
         self.VERSION = "1.0.8"
-
-        self.current_language = self.settings.get("Language", "English")
 
         # --------------------------------------------------
         #     Side Bar
@@ -192,10 +207,10 @@ class App(ctk.CTk):
         # --------------------------------------------------
 
         # create the settings frame
-        self.settings_frame = ctk.CTkScrollableFrame(self, corner_radius=0, border_width=0, width =1000, fg_color="transparent", orientation="vertical")
+        self.settings_frame = ctk.CTkScrollableFrame(self, corner_radius=0, border_width=0, width =600, fg_color="transparent", orientation="vertical")
         self.settings_frame.grid_rowconfigure(0, weight=0)
-        self.settings_frame.grid_columnconfigure(0, minsize=350, weight=1)
-        self.settings_frame.grid_columnconfigure(1, minsize=300, weight=1)
+        self.settings_frame.grid_columnconfigure(0, minsize=400, weight=0)
+        self.settings_frame.grid_columnconfigure(1, minsize=300, weight=0)
 
         self.settings_frame_title = ctk.CTkLabel(self.settings_frame, text="Settings", font=ctk.CTkFont(size=20, weight="bold"))
         self.settings_frame_title.grid(row=0, column=0, columnspan=2, padx=(10, 10), pady=(20,10), sticky="w")
@@ -243,13 +258,25 @@ class App(ctk.CTk):
 
         self.theme_optionemenu.set(self.settings["Theme"]) 
 
+        ### App Textbox Font Size
+        n_row += 1
+        self.textbox_font_size_label = ctk.CTkLabel(self.settings_frame, text="App Textbox Font Size")
+        self.textbox_font_size_label.grid(row=n_row, column=0, padx=(10, padx_left_labels), pady=10, sticky="w")
+
+        self.textbox_font_size_opt = ctk.CTkEntry(self.settings_frame)
+        self.textbox_font_size_opt.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="e")
+        self.textbox_font_size_opt.insert('end', self.settings["textbox_fontsize"])
+        self.textbox_font_size_opt.bind("<FocusOut>", lambda e: self.on_textbox_font_size_change())
+        self.textbox_font_size_opt.bind("<Return>", lambda e: self.on_textbox_font_size_change())
+        self.textbox.configure(font=ctk.CTkFont(size=self.settings["textbox_fontsize"]))
+
         ### Font
         n_row += 1
         self.font_label = ctk.CTkLabel(self.settings_frame, text="Font")
         self.font_label.grid(row=n_row, column=0, padx=(10, padx_left_labels), pady=10, sticky="w")
 
         font_options = ["Arial", "Arial2", "Arials"]
-        self.font_opt = ctk.CTkOptionMenu(self.settings_frame, values=list(WindowsFonts.keys()), command=self.change_font_event)
+        self.font_opt = ctk.CTkOptionMenu(self.settings_frame, values=list(FontsFinder().keys()), command=self.change_font_event)
         self.font_opt.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="e")
         
         self.font_opt.set(self.settings["font"])
@@ -265,17 +292,16 @@ class App(ctk.CTk):
         self.font_size_opt.bind("<FocusOut>", lambda e: self.on_font_size_change())
         self.font_size_opt.bind("<Return>", lambda e: self.on_font_size_change())
 
-        ### App Textbox Font Size
+        ### Line Spacing
         n_row += 1
-        self.textbox_font_size_label = ctk.CTkLabel(self.settings_frame, text="App Textbox Font Size")
-        self.textbox_font_size_label.grid(row=n_row, column=0, padx=(10, padx_left_labels), pady=10, sticky="w")
+        self.line_spacing_label = ctk.CTkLabel(self.settings_frame, text="Line Spacing")
+        self.line_spacing_label.grid(row=n_row, column=0, padx=(10, padx_left_labels), pady=10, sticky="w")
 
-        self.textbox_font_size_opt = ctk.CTkEntry(self.settings_frame)
-        self.textbox_font_size_opt.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="e")
-        self.textbox_font_size_opt.insert('end', self.settings["textbox_fontsize"])
-        self.textbox_font_size_opt.bind("<FocusOut>", lambda e: self.on_textbox_font_size_change())
-        self.textbox_font_size_opt.bind("<Return>", lambda e: self.on_textbox_font_size_change())
-        self.textbox.configure(font=ctk.CTkFont(size=self.settings["textbox_fontsize"]))
+        self.line_spacing_opt = ctk.CTkEntry(self.settings_frame)
+        self.line_spacing_opt.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="e")
+        self.line_spacing_opt.insert('end', self.settings["line_spacing"])
+        self.line_spacing_opt.bind("<FocusOut>", lambda e: self.on_line_spacing_change())
+        self.line_spacing_opt.bind("<Return>", lambda e: self.on_line_spacing_change())
 
         ### Position 
         n_row += 1
@@ -298,9 +324,7 @@ class App(ctk.CTk):
         self.text_color_opt = ctk.CTkButton(self.settings_frame, text="Choose Color", command=self.choose_text_color)
         self.text_color_opt.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="e")
 
-        global text_color
-        text_color = self.settings["text_color"]
-        self.text_color_label_box.configure(text_color=text_color)
+        self.text_color_label_box.configure(text_color=self.settings["text_color"])
         
         ### Box Color
         n_row += 1
@@ -313,31 +337,30 @@ class App(ctk.CTk):
         self.box_color_opt = ctk.CTkButton(self.settings_frame, text="Choose Color", command=self.choose_box_color)
         self.box_color_opt.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="e")
 
-        global box_color
-        box_color = self.settings["box_color"]
-        self.box_color_label_box.configure(text_color=box_color)
-
-        ### Frame Padding
-        n_row += 1
-        self.frame_padding_label = ctk.CTkLabel(self.settings_frame, text="Text-Box Padding")
-        self.frame_padding_label.grid(row=n_row, column=0, padx=(10, padx_left_labels), pady=10, sticky="w")
-
-        self.frame_padding_opt = ctk.CTkEntry(self.settings_frame)
-        self.frame_padding_opt.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="e")
-        self.frame_padding_opt.insert('end', self.settings["text_padding"])
-        self.frame_padding_opt.bind("<FocusOut>", lambda e: self.on_frame_padding_change())
-        self.frame_padding_opt.bind("<Return>", lambda e: self.on_frame_padding_change())
+        self.box_color_label_box.configure(text_color=self.settings["box_color"])
 
         ### Text Padding
         n_row += 1
-        self.text_padding_label = ctk.CTkLabel(self.settings_frame, text="Box-Frame Padding")
+        self.text_padding_label = ctk.CTkLabel(self.settings_frame, text="Text Padding")
         self.text_padding_label.grid(row=n_row, column=0, padx=(10, padx_left_labels), pady=10, sticky="w")
 
         self.text_padding_opt = ctk.CTkEntry(self.settings_frame)
         self.text_padding_opt.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="e")
-        self.text_padding_opt.insert('end', self.settings["frame_padding"])
+        self.text_padding_opt.insert('end', self.settings["text_padding"])
         self.text_padding_opt.bind("<FocusOut>", lambda e: self.on_text_padding_change())
         self.text_padding_opt.bind("<Return>", lambda e: self.on_text_padding_change())
+
+        ### Text Padding
+        n_row += 1
+        self.box_padding_label = ctk.CTkLabel(self.settings_frame, text="Box Padding")
+        self.box_padding_label.grid(row=n_row, column=0, padx=(10, padx_left_labels), pady=10, sticky="w")
+
+        self.box_padding_opt = ctk.CTkEntry(self.settings_frame)
+        self.box_padding_opt.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="e")
+        self.box_padding_opt.insert('end', self.settings["box_padding"])
+        self.box_padding_opt.bind("<FocusOut>", lambda e: self.on_box_padding_change())
+        self.box_padding_opt.bind("<Return>", lambda e: self.on_box_padding_change())
+        
 
         ### Desktop Wallpaper Path
         n_row += 1
@@ -351,15 +374,7 @@ class App(ctk.CTk):
         self.desktop_wallpaper_dir_opt.grid(row=n_row+1, column=0, columnspan =2, padx=(10,10), pady=(10,10), sticky="ew")
         
         self.desktop_wallpaper_dir_opt.insert('end', self.settings["desktop_wallpaper"])
-        
-        # ### Current Desktop Wallpaper
-        # n_row += 2
-        # self.desktop_wallpaper_dir_label = ctk.CTkLabel(self.settings_frame, text="Current Desktop Wallpaper:")
-        # self.desktop_wallpaper_dir_label.grid(row=n_row, column=0, padx=(10, padx_left_labels), pady=5, sticky="w")
 
-        # ctk_img = ctk.CTkImage(light_image=img, dark_image=img, size = (340,200))
-        # self.desktop_wallpaper_image = ctk.CTkLabel(self.settings_frame, text="", image = ctk_img)
-        # self.desktop_wallpaper_image.grid(row=n_row+1, column=0, columnspan =2, padx=(10,10), pady=(0,10), sticky="ew")
 
         ### Check for updates
         n_row += 2
@@ -371,15 +386,9 @@ class App(ctk.CTk):
 
         ## Reset Settings Button
         n_row += 3
-        self.settings_frame.grid_columnconfigure(n_row, weight=1)
+        self.settings_frame.grid_rowconfigure(n_row, weight=1)
         self.reset_settings_button = ctk.CTkButton(self.settings_frame,text="Reset Settings" ,command=self.ResetSettings)
-        self.reset_settings_button.grid(row=n_row, column=0, columnspan=2, padx=(10, 10), pady=(50, 5), sticky="ew")
-
-        ## Delete Data Button
-        n_row += 1
-        self.settings_frame.grid_columnconfigure(n_row, weight=1)
-        self.delete_all_data_button = ctk.CTkButton(self.settings_frame,text="Delete App Data" , hover_color= "darkred",  command=self.DeleAllData)
-        self.delete_all_data_button.grid(row=n_row, column=0, columnspan=2, padx=(10, 10), pady=(5, 10), sticky="ew")
+        self.reset_settings_button.grid(row=n_row, column=0, columnspan=2, padx=(10, 10), pady=(30, 10), sticky="ew")
 
         # --------------------------------------------------
         #       History Frame
@@ -390,8 +399,6 @@ class App(ctk.CTk):
         self.history_frame.grid_rowconfigure(1, weight=0)
         self.history_frame.grid_rowconfigure(2, weight=1)
         self.history_frame.grid_columnconfigure(0, weight=1)
-
-
 
         # Label
         self.history_page_title = ctk.CTkLabel(self.history_frame, text="History", font=ctk.CTkFont(size=20, weight="bold"))
@@ -590,6 +597,11 @@ class App(ctk.CTk):
             pass
 
         try:
+            self.drawing_algorithm_label.configure(text=self.get_text("line_spacing"))
+        except Exception:
+            pass
+
+        try:
             self.textbox_font_size_label.configure(text=self.get_text("textbox_font_size"))
         except Exception:
             pass
@@ -605,17 +617,27 @@ class App(ctk.CTk):
             pass
 
         try:
+            self.text_color_opt.configure(text=self.get_text("chose_color"))
+        except Exception:
+            pass
+
+        try:
             self.box_color_label.configure(text=self.get_text("box_color"))
         except Exception:
             pass
 
         try:
-            self.frame_padding_label.configure(text=self.get_text("text_box_padding"))
+            self.box_color_opt.configure(text=self.get_text("chose_color"))
         except Exception:
             pass
 
         try:
-            self.text_padding_label.configure(text=self.get_text("box_frame_padding"))
+            self.text_padding_label.configure(text=self.get_text("text_padding"))
+        except Exception:
+            pass
+
+        try:
+            self.box_padding_label.configure(text=self.get_text("box_padding"))
         except Exception:
             pass
 
@@ -636,6 +658,11 @@ class App(ctk.CTk):
 
         try:
             self.check_update_opt.configure(text=self.get_text("check_updates"))
+        except Exception:
+            pass
+
+        try:
+            self.drawing_algorithm_label.configure(text=self.get_text("drawing_algorithm").format(version=self.VERSION))
         except Exception:
             pass
 
@@ -692,97 +719,57 @@ class App(ctk.CTk):
             messagebox.showerror("Error", f"Failed to save settings: {str(e)}")
     
     def ResetSettings(self):
-        """Reset settings to defaults (after user confirmation) and update the UI."""
+
         if not messagebox.askyesno("Confirm Reset", "This will reset all settings to defaults. Continue?"):
             return
 
         try:
-            # Reset settings dict (shallow copy is fine: values are primitives)
+            # Preserve current desktop wallpaper selection (if any)
+            current_wallpaper = self.settings.get("desktop_wallpaper")
 
+            # Make a fresh independent copy of defaults
             self.settings = self.default_settings.copy()
 
-            # # Recompute font size if wallpaper image exists (more robust)
-            # wp = self.settings.get("desktop_wallpaper") or fn.get_wallpaper_path()
-            # img_w, img_h = 0, 0
-            # try:
-            #     if os.path.exists(wp):
-            #         img = Image.open(wp)
-            #         img_w, img_h = img.size
-            #         self.settings["font size"] = int((img_w + img_h) / 2 * 0.03 / 1.333)
-            #         ctk_img = ctk.CTkImage(light_image=img, dark_image=img, size = (340,200))
-            #         self.desktop_wallpaper_image.configure(image = ctk_img)
-            # except Exception:
-            #     # If image read fails, keep existing font size value
-            #     img_w, img_h = 0, 0
+            # If user had a custom wallpaper before reset, preserve it
+            if current_wallpaper:
+                self.settings["desktop_wallpaper"] = current_wallpaper
 
-            # Apply CTk appearance / theme / scaling
-            try:
-                ctk.set_default_color_theme(ThemeOptions[self.settings["Theme"]])
-            except Exception:
-                # fallback to current theme if lookup fails
-                pass
+            # Apply UI values from self.settings (use settings, not default_settings)
+            self.change_theme_event(self.settings["Theme"])
             ctk.set_appearance_mode(self.settings["Apperance Mode"])
-            try:
-                ctk.set_widget_scaling(int(self.settings["UI Scaling"].replace("%", "")) / 100)
-            except Exception:
-                pass
-
-            # Update settings widgets to reflect defaults
+            ctk.set_widget_scaling(int(self.settings["UI Scaling"].replace("%", "")) / 100)
             self.appearance_mode_optionemenu.set(self.settings["Apperance Mode"])
             self.scaling_optionemenu.set(self.settings["UI Scaling"])
             self.theme_optionemenu.set(self.settings["Theme"])
             self.font_opt.set(self.settings["font"])
 
-            # Font size entry
             self.font_size_opt.delete(0, "end")
             self.font_size_opt.insert("end", self.settings["font size"])
 
-            # Textbox font size entry + apply to textbox
+            self.line_spacing_opt.delete(0, "end")
+            self.line_spacing_opt.insert("end", self.settings["line_spacing"])
+
             self.textbox_font_size_opt.delete(0, "end")
             self.textbox_font_size_opt.insert("end", self.settings["textbox_fontsize"])
-            try:
-                self.textbox.configure(font=ctk.CTkFont(size=int(self.settings["textbox_fontsize"])))
-            except Exception:
-                pass
+            self.textbox.configure(font=ctk.CTkFont(size=int(self.settings["textbox_fontsize"])))
 
-            # Position
             self.position_opt.set(self.settings["position"])
-
-            # Colors (also update globals used by Save)
-            global text_color, box_color
-            text_color = self.settings.get("text_color", "white")
-            box_color = self.settings.get("box_color", "black")
-            try:
-                self.text_color_label_box.configure(text_color=text_color)
-                self.box_color_label_box.configure(text_color=box_color)
-            except Exception:
-                pass
-
-            # Padding entries (note keys used in your code)
-            self.frame_padding_opt.delete(0, "end")
-            self.frame_padding_opt.insert("end", self.settings.get("text_padding", "30"))
+            self.text_color_label_box.configure(text_color=self.settings["text_color"])
+            self.box_color_label_box.configure(text_color=self.settings["box_color"])
 
             self.text_padding_opt.delete(0, "end")
-            self.text_padding_opt.insert("end", self.settings.get("frame_padding", "80"))
+            self.text_padding_opt.insert("end", self.settings["text_padding"])
 
-            # # Desktop wallpaper entry
-            # self.desktop_wallpaper_dir_opt.delete(0, "end")
-            # self.desktop_wallpaper_dir_opt.insert("end", self.settings.get("desktop_wallpaper", ""))
+            self.box_padding_opt.delete(0, "end")
+            self.box_padding_opt.insert("end", self.settings["box_padding"])
 
-            # # Update console info (show wallpaper info and suggested font size)
-            # self.console_textbox.configure(state="normal")
-            # self.console_textbox.delete("1.0", "end")
-            # self.console_textbox.insert('0.0', f"● Operating System:\n  --->  {platform.system()}\n\n")
-            # self.console_textbox.insert('end', f"● Desktop Wallpaper Location:\n  --->  {self.settings.get('desktop_wallpaper')}\n\n")
-            # self.console_textbox.insert('end', f"● Desktop Wallpaper Image Size (using Pillow):\n  ---> {img_w}(w) * {img_h}(h)\n\n")
-            # self.console_textbox.insert('end', f"● Suggested Text Font Size for TDL:\n  ---> {self.settings.get('font size')}\n\n")
-            # self.console_textbox.insert('end', "● Existing Fonts For Chinese Language Support:\n  ---> Simfang, Simhei, Simkai\n\n")
-            # self.console_textbox.configure(state="disabled")
+            # Update the wallpaper entry widget too
+            self.desktop_wallpaper_dir_opt.delete(0, "end")
+            self.desktop_wallpaper_dir_opt.insert("end", self.settings["desktop_wallpaper"])
 
-            # Persist defaults to disk
+            # Persist the reset settings
             self.save_settings()
 
-            
         except Exception as e:
             messagebox.showerror("Error", f"Failed to reset settings: {str(e)}")
 
@@ -790,97 +777,119 @@ class App(ctk.CTk):
     ### Updating Settings
 
     def change_font_event(self, new_font: str):
-        """Called when user selects a new font from the OptionMenu."""
         self.settings["font"] = new_font
         self.save_settings()
 
     def on_font_size_change(self):
-        """Validate and save the global font size used for drawing on desktop."""
+
         val = self.font_size_opt.get().strip()
+
         if val == "":
             return
-        try:
-            v = int(val)
-            self.settings["font size"] = v
-            self.save_settings()
+
+        try: v = int(val)
         except ValueError:
-            messagebox.showerror("Invalid Value", "Font size must be an integer.")
-            # revert entry to saved value
-            self.font_size_opt.delete(0, "end")
-            self.font_size_opt.insert("end", str(self.settings.get("font size", "")))
+            try: v = float(val)
+            except ValueError:
+                self.font_size_opt.delete(0, "end")
+                self.font_size_opt.insert("end", str(self.settings.get("font size", "")))
+                messagebox.showerror("Invalid Value", "Font size must be a number.")
+                return
+
+        self.settings["font size"] = v
+        self.save_settings()
 
     def on_textbox_font_size_change(self):
-        """Apply and save the app textbox font size."""
+
         val = self.textbox_font_size_opt.get().strip()
+
         if val == "":
             return
-        try:
-            v = int(val)
-            self.settings["textbox_fontsize"] = v
-            # apply immediately to textbox
-            try:
-                self.textbox.configure(font=ctk.CTkFont(size=v))
-            except Exception:
-                pass
-            self.save_settings()
+
+        try: v = int(val)
         except ValueError:
-            messagebox.showerror("Invalid Value", "Textbox font size must be an integer.")
-            self.textbox_font_size_opt.delete(0, "end")
-            self.textbox_font_size_opt.insert("end", str(self.settings.get("textbox_fontsize", 14)))
+            try: v = float(val)
+            except ValueError:
+                self.textbox_font_size_opt.delete(0, "end")
+                self.textbox_font_size_opt.insert("end", str(self.settings.get("textbox_fontsize", "")))
+                messagebox.showerror("Invalid Value", "Textbox font size must be a number.")
+                return
+
+        self.settings["textbox_fontsize"] = v
+        self.save_settings()
+
+    def on_line_spacing_change(self):
+
+        val = self.line_spacing_opt.get().strip()
+
+        if val == "":
+            return
+
+        try: v = int(val)
+        except ValueError:
+            try: v = float(val)
+            except ValueError:
+                self.line_spacing_opt.delete(0, "end")
+                self.line_spacing_opt.insert("end", str(self.settings.get("line_spacing", "")))
+                messagebox.showerror("Invalid Value", "Line spacing must be a number.")
+                return
+
+        self.settings["line_spacing"] = v
+        self.save_settings()
 
     def change_position_event(self, new_position: str):
-        """Save desktop text position selection."""
         self.settings["position"] = new_position
         self.save_settings()
 
-    def on_frame_padding_change(self):
-        """Save Text-Box Padding (frame padding)."""
-        val = self.frame_padding_opt.get().strip()
-        if val == "":
-            return
-        try:
-            v = int(val)
-            self.settings["text_padding"] = str(v)   # keep same type as your defaults (strings)
-            self.save_settings()
-        except ValueError:
-            messagebox.showerror("Invalid Value", "Text-Box Padding must be an integer.")
-            self.frame_padding_opt.delete(0, "end")
-            self.frame_padding_opt.insert("end", str(self.settings.get("text_padding", "30")))
-
     def on_text_padding_change(self):
-        """Save Box-Frame Padding (text padding)."""
+
         val = self.text_padding_opt.get().strip()
+
         if val == "":
             return
-        try:
-            v = int(val)
-            self.settings["frame_padding"] = str(v)
-            self.save_settings()
+
+        try: v = int(val)
         except ValueError:
-            messagebox.showerror("Invalid Value", "Box-Frame Padding must be an integer.")
-            self.text_padding_opt.delete(0, "end")
-            self.text_padding_opt.insert("end", str(self.settings.get("frame_padding", "80")))
+            try: v = float(val)
+            except ValueError:
+                self.text_padding_opt.delete(0, "end")
+                self.text_padding_opt.insert("end", str(self.settings.get("text_padding", "")))
+                messagebox.showerror("Invalid Value", "Text padding must be a number.")
+                return
+
+        self.settings["text_padding"] = v
+        self.save_settings()
+
+    def on_box_padding_change(self):
+
+        val = self.box_padding_opt.get().strip()
+
+        if val == "":
+            return
+
+        try: v = int(val)
+        except ValueError:
+            try: v = float(val)
+            except ValueError:
+                self.box_padding_opt.delete(0, "end")
+                self.box_padding_opt.insert("end", str(self.settings.get("box_padding", "")))
+                messagebox.showerror("Invalid Value", "Box padding must be a number.")
+                return
+
+        self.settings["box_padding"] = v
+        self.save_settings()
 
     def choose_text_color(self):
-        global text_color
         color = colorchooser.askcolor(initialcolor='white')[1]
         self.text_color_label_box.configure(text_color = color)
-        text_color = color
         self.settings["text_color"] = color
         self.save_settings()
 
     def choose_box_color(self):
-        global box_color
         color = colorchooser.askcolor(initialcolor='black')[1]
         self.box_color_label_box.configure(text_color = color)
-        box_color = color
         self.settings["box_color"] = color
         self.save_settings()
-
-    def HistoryFileDirectory(self):
-        directory = filedialog.askdirectory(title="Select Directory")
-        self.histroy_file_dir_opt.delete(0, "end")
-        self.histroy_file_dir_opt.insert('end', f'{directory}\history.txt')
 
     def ChangeWallpaper(self):
         file_path = filedialog.askopenfilename(
@@ -891,58 +900,58 @@ class App(ctk.CTk):
             self.desktop_wallpaper_dir_opt.delete(0, "end")
             self.desktop_wallpaper_dir_opt.insert('end', file_path)
             self.settings["desktop_wallpaper"] = file_path
-
-            img = Image.open(file_path)
-            img_w, img_h = img.size
+        
+            img = imread(file_path)
+            img_h, img_w = img.shape[:2]
             self.settings["font size"] = int((img_w + img_h)/2 * 0.03/1.333)
-
-            ctk_img = ctk.CTkImage(light_image=img, dark_image=img, size = (340,200))
-            self.desktop_wallpaper_image.configure(image = ctk_img)
 
             self.font_size_opt.delete(0, "end")
             self.font_size_opt.insert('end',int((img_w + img_h)/2 * 0.03/1.333))
-
-
             self.save_settings()
 
     ### App Functionalties
     
     def Save(self):
-        global box_color, text_color
+
         entry = self.textbox.get('0.0','end').strip()
 
-        # read textbox text-size from the settings page
-        self.textbox.configure(font=ctk.CTkFont(size=int(self.textbox_font_size_opt.get())))
+        if entry != "" :
 
-        if entry != "":
-            fn.WriteOnDesktop(entry, 
-                            self.desktop_wallpaper_dir_opt.get(),
-                            self.position_opt.get(), 
-                            self.font_opt.get(),
-                            int(self.font_size_opt.get()),
-                            text_color,
-                            box_color,
-                            int(self.text_padding_opt.get()),
-                            int(self.frame_padding_opt.get())
-                            )
+            from PIL_CV2 import MixedMethod
+            from functions import text_handler
 
-            # Save to the history file
-            history = f"{datetime.date.today()}  ({datetime.datetime.now().strftime('%I:%M %p')})\n{entry}\n\n"
+            MixedMethod(
+                text_handler(entry),
+                self.desktop_wallpaper_dir_opt.get(),
+                self.position_opt.get(), 
+                FontsFinder()[self.font_opt.get()],
+                float(self.font_size_opt.get()),
+                self.settings["text_color"],
+                self.settings["box_color"],
+                int(self.box_padding_opt.get()),
+                int(self.text_padding_opt.get()),
+                float(self.line_spacing_opt.get()),
+                self.sub_files
+                    )
 
-            try:
-                with open(self.history_file, "r", encoding="utf-8") as f:
-                    existing_content = f.read()
-            except FileNotFoundError:
-                existing_content = ""
-
-            with open(self.history_file, "w", encoding="utf-8") as f:
-                f.write(history + existing_content)
-
-            self.history_textbox.configure(state="normal")  # Temporarily allow writing
-            self.history_textbox.insert('0.0', history)
-            self.history_textbox.configure(state="disabled") # Lock again
-            self.history_label.configure(text=f"History file size: {fn.FileSize(self.history_file)}")
         else: pass
+
+        # Save to the history file
+        history = f"{datetime.date.today()}  ({datetime.datetime.now().strftime('%I:%M %p')})\n{entry}\n\n"
+
+        try:
+            with open(self.history_file, "r", encoding="utf-8") as f:
+                existing_content = f.read()
+        except FileNotFoundError:
+            existing_content = "" 
+
+        with open(self.history_file, "w", encoding="utf-8") as f:
+            f.write(history + existing_content)
+
+        self.history_textbox.configure(state="normal")  # Temporarily allow writing
+        self.history_textbox.insert('0.0', history)
+        self.history_textbox.configure(state="disabled") # Lock again
+        self.history_label.configure(text=f"History file size: {fn.FileSize(self.history_file)}")
     
     def Reset(self):
         fn.set_wallpaper(self.desktop_wallpaper_dir_opt.get())
@@ -972,107 +981,44 @@ class App(ctk.CTk):
         
         self.history_label.configure(text=f"History file size: {fn.FileSize(self.history_file)}")
 
-    def DeleAllData(self):
-
-        if messagebox.askyesno("Confirm Deletion", 
-                               f"This action will permanently delete all local history and settings files at:\n - {self.settings_file}\n - {self.history_file}\nDo you wish to proceed?"):
-            
-            # (1) Clean desktop wallpaper
-            self.Reset()
-
-            # (2) Reset Settings
-            self.ResetSettings()
-            
-            # (3) Clean history textbox
-            self.history_textbox.configure(state="normal")  # Temporarily allow writing
-            self.history_textbox.delete("1.0", "end")
-            self.history_textbox.configure(state="disabled") # Lock again
-
-            # (4) Clean TDL textbox
-            self.textbox.delete("1.0", "end")
-            
-            # (5) Delete app files
-            try:
-                if os.path.exists(self.data_folder):
-                    from shutil import rmtree
-                    rmtree(self.data_folder)
-            except (IOError, PermissionError) as e:
-                messagebox.showerror("Error", f"Failed to delete history: {str(e)}")
-
-        else:
-            # Do nothing if user cancels
-            pass
 
     def CheckUpdates(self):
-        import requests, base64
-        path = "version.txt"
-        branch = "main"
-        api_url = f"https://api.github.com/repos/ammelsayed/Desktop-TDL/contents/{path}?ref={branch}"
-        response = requests.get(api_url)
-        if response.status_code == 200:
-            data = response.json()
-            content = base64.b64decode(data["content"]).decode("utf-8").strip()
+        try:
+            import requests
+        except Exception:
+            messagebox.showerror("Error", "The 'requests' package is required for update checks.")
+            return
+
+        latest_url = "https://github.com/ammelsayed/Desktop-TDL/releases/latest"
+
+        try:
+            # Don't follow redirects so we can read the Location header
+            response = requests.get(latest_url, allow_redirects=False, timeout=6)
+            response.raise_for_status()
+
+            # GitHub will redirect to something like:
+            # https://github.com/ammelsayed/Desktop-TDL/releases/tag/v1.0.7
+            location = response.headers.get("Location", "")
+            if not location or "/tag/" not in location:
+                raise RuntimeError("Could not determine latest release tag.")
+
+            latest_tag = location.rsplit("/", 1)[-1].lstrip("v")  # e.g. "1.0.7"
             local_version = tuple(map(int, self.VERSION.split('.')))
-            remote_version = tuple(map(int, content.split('.')))
-            if remote_version > local_version:
-                if messagebox.askyesno("Update Available", f"Latest update available: {content}. Do you wish to update?"):
-                    
-                    from webbrowser import open
-                    open("https://ammelsayed.github.io/projects/DesktopTDL/")
+            remote_version = tuple(map(int, latest_tag.split('.')))
 
-                    # update_url = "https://github.com/ammelsayed/Desktop-TDL/releases/download/1.0.7/DesktopTDL.exe"
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to check for updates: {e}")
+            return
 
-                    # import tempfile
-                    # from glob import glob
-                    # from tempfile import gettempdir
-                    # from shutil import copy2
-                    # from subprocess import Popen
-
-                    # try:
-                    #     # 1. Download new exe to a temp file
-                    #     tmp_path = os.path.join(gettempdir(), "DesktopTDL_new.exe")
-                    #     r = requests.get(update_url, stream=True)
-                    #     r.raise_for_status()
-                    #     with open(tmp_path, "wb") as f:
-                    #         for chunk in r.iter_content(chunk_size=8192):
-                    #             f.write(chunk)
-
-                    #     # 2. Find and delete all old DesktopTDL.exe files
-                    #     search_paths = [
-                    #         f"{os.environ.get('LOCALAPPDATA')}\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs",
-                    #     ]
-
-                    #     for path in search_paths:
-                    #         if os.path.exists(path):
-                    #             for file in glob.glob(path + "\\**\\DesktopTDL.exe", recursive=True):
-                    #                 try:
-                    #                     if os.path.samefile(file, sys.executable):
-                    #                         continue  # don't delete the running one
-                    #                     os.remove(file)
-                    #                 except Exception:
-                    #                     pass
-
-                    #     # 3. Copy the new exe to replace the running one
-                    #     new_path = os.path.join(os.path.dirname(sys.executable), "DesktopTDL.exe")
-                    #     copy2(tmp_path, new_path)
-
-                    #     # 4. Start the new exe
-                    #     Popen([new_path])
-
-                    #     # 5. Exit current app
-                    #     self.destroy()
-                    #     sys.exit(0)
-
-                    # except Exception as e:
-                    #     import tkinter.messagebox as messagebox
-                    #     messagebox.showerror("Update Failed", f"Error while updating: {str(e)}")
-
-            else:
-                messagebox.showinfo("Up to Date", f"You are running the latest version: {self.VERSION}")
+        if remote_version > local_version:
+            if messagebox.askyesno("Update Available",
+                                f"Latest update available: {latest_tag}. Do you wish to open the releases page?"):
+                import webbrowser
+                webbrowser.open(latest_url)
         else:
-            messagebox.showerror("Error", f"Failed to check for updates: Error {response.status_code}")
+            messagebox.showinfo("Up to Date", f"You are running the latest version: {self.VERSION}")
 
-  
+
 
 if __name__ == "__main__":
     app = App()
