@@ -1,5 +1,6 @@
 from datetime import date
 import sys,os
+from textwrap import wrap
 
 
 def FileSize(file_path):
@@ -65,14 +66,20 @@ def set_wallpaper(path):
             text=True
         )
     
-def text_handler(todo_items):
+def text_handler(todo_items, max_character_length):
 
-    # Title
-    line_lenght = 11
-    title = f"To Do List ({date.today()})\n{'—'*line_lenght}\n"
+    title = f"To Do List ({date.today()})\n{'—'*11}\n"
 
-    # Compose text
-    text = title + "\n".join(f"({i+1}) {item}" for i, item in enumerate(todo_items.split("\n")))
+    items = [line.strip() for line in todo_items.splitlines() if line.strip()]
+    out = []
+    for i, item in enumerate(items):
+        p = f"({i+1}) "
+        wrapped = wrap(item,
+                                width=max_character_length,
+                                break_long_words=False,
+                                break_on_hyphens=False) or ['']
+        out.append(p + wrapped[0])
+        indent = ' ' * len(p)
+        out.extend(indent + w for w in wrapped[1:])
 
-    return text
-
+    return title + "\n".join(out)

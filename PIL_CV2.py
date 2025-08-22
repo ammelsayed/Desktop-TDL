@@ -54,6 +54,7 @@ def MixedMethod(
     frame_padding,
     text_box_padding,
     line_spacing,
+    font_weight,
     data_folder
 ):
     # Load image
@@ -132,7 +133,8 @@ def MixedMethod(
     for i, line in enumerate(lines):
         w, h, baseline = sizes[i]  
         draw.text((rect_left + text_box_padding, y - h), line,
-                  font=font, fill=tuple(reversed(hex_to_bgr(text_color))))
+                  font=font, fill=tuple(reversed(hex_to_bgr(text_color))),
+                  stroke_width=font_weight, stroke_fill=tuple(reversed(hex_to_bgr(text_color))),)
 
         # Move y for next line
         if i < 2 or i == len(lines) - 1:

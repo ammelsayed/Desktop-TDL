@@ -36,7 +36,7 @@ class App(ctk.CTk):
         ## Configure window
 
         self.title("Desktop TDL App")
-        self.geometry("800x600")
+        self.geometry("750x550")
 
         ## --------------------------------------
         ## Icon settings 
@@ -102,11 +102,13 @@ class App(ctk.CTk):
             "font": "Comic",
             "font size": 14,
             "line_spacing" : 1,
+            "font_weight" : 0,
             "textbox_fontsize" : 14,
             "text_color": "#ffffff",
             "box_color": "#000000",
             "text_padding": "30",
             "box_padding": "80",
+            "wrap_length" : 60,
             "desktop_wallpaper": fn.get_wallpaper_path(),
         }
 
@@ -135,7 +137,7 @@ class App(ctk.CTk):
         ctk.set_appearance_mode(self.settings["Apperance Mode"])
         ctk.set_widget_scaling(int(self.settings["UI Scaling"].replace("%", "")) / 100)
 
-        self.VERSION = "1.0.8"
+        self.VERSION = "1.0.7"
 
         # --------------------------------------------------
         #     Side Bar
@@ -191,8 +193,9 @@ class App(ctk.CTk):
         textbox_fontsize = 14 # This is a variable
         self.textbox = ctk.CTkTextbox(self.main_frame, font=ctk.CTkFont(size=textbox_fontsize))
         self.textbox.grid(row=2, column=0, columnspan=2, pady=(0, 10), padx=(10, 10), sticky="nsew")
-        with open(self.history_file, "r", encoding="utf-8") as f:
-            self.textbox.insert('0.0',"\n".join(f.read().split("\n\n")[0].split("\n")[1:]))
+
+        with open(self.history_file, "r", encoding="utf-8") as f: 
+            self.textbox.insert('0.0',"\n".join(f.read().split(f"{'='*50}")[0].split("\n")[2:]))
 
         # Rest Button
         self.reset_button = ctk.CTkButton(self.main_frame,text="Remove from Desktop", command=self.Reset)
@@ -209,17 +212,30 @@ class App(ctk.CTk):
         # create the settings frame
         self.settings_frame = ctk.CTkScrollableFrame(self, corner_radius=0, border_width=0, width =600, fg_color="transparent", orientation="vertical")
         self.settings_frame.grid_rowconfigure(0, weight=0)
-        self.settings_frame.grid_columnconfigure(0, minsize=400, weight=0)
-        self.settings_frame.grid_columnconfigure(1, minsize=300, weight=0)
+        self.settings_frame.grid_columnconfigure(0, minsize=470, weight=0)
+        self.settings_frame.grid_columnconfigure(1, minsize=200, weight=0)
 
         self.settings_frame_title = ctk.CTkLabel(self.settings_frame, text="Settings", font=ctk.CTkFont(size=20, weight="bold"))
         self.settings_frame_title.grid(row=0, column=0, columnspan=2, padx=(10, 10), pady=(20,10), sticky="w")
 
-        padx_left_labels = 10
-        padx_right_optiosn = 10
+        padx_left_labels = 0
+        padx_right_optiosn = 0
+
+        ### Desktop Wallpaper Path
+        n_row = 1
+        self.desktop_wallpaper_dir_label = ctk.CTkLabel(self.settings_frame, text="Desktop Wallpaper Path:")
+        self.desktop_wallpaper_dir_label.grid(row=n_row, column=0, columnspan =2, padx=(10,10), pady=(10,0), sticky="w")
+
+        self.desktop_wallpaper_dir_button = ctk.CTkButton(self.settings_frame, text="Change Wallpaper", command=self.ChangeWallpaper)
+        self.desktop_wallpaper_dir_button.grid(row=n_row + 1, column=1, padx=(padx_right_optiosn, 10), pady=(1,10), sticky="e")
+
+        self.desktop_wallpaper_dir_opt = ctk.CTkEntry(self.settings_frame, border_width = 0, bg_color = "transparent")
+        self.desktop_wallpaper_dir_opt.grid(row=n_row+1, column=0, padx=(10,10), pady=(1,10), sticky="ew")
+        
+        self.desktop_wallpaper_dir_opt.insert('end', self.settings["desktop_wallpaper"])
 
         ### Language
-        n_row = 1
+        n_row += 2
         self.language_label = ctk.CTkLabel(self.settings_frame, text="Language", anchor="w")
         self.language_label.grid(row=n_row, column=0, padx=(10, padx_left_labels), pady=10, sticky="w")
 
@@ -303,6 +319,17 @@ class App(ctk.CTk):
         self.line_spacing_opt.bind("<FocusOut>", lambda e: self.on_line_spacing_change())
         self.line_spacing_opt.bind("<Return>", lambda e: self.on_line_spacing_change())
 
+        ### Font Weight
+        n_row += 1
+        self.font_weight_label = ctk.CTkLabel(self.settings_frame, text="Font Weight")
+        self.font_weight_label.grid(row=n_row, column=0, padx=(10, padx_left_labels), pady=10, sticky="w")
+
+        self.font_weight_opt = ctk.CTkEntry(self.settings_frame)
+        self.font_weight_opt.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="e")
+        self.font_weight_opt.insert('end', self.settings["font_weight"])
+        self.font_weight_opt.bind("<FocusOut>", lambda e: self.on_font_weight_change())
+        self.font_weight_opt.bind("<Return>", lambda e: self.on_font_weight_change())
+
         ### Position 
         n_row += 1
         self.position_label = ctk.CTkLabel(self.settings_frame, text="Position")
@@ -360,21 +387,17 @@ class App(ctk.CTk):
         self.box_padding_opt.insert('end', self.settings["box_padding"])
         self.box_padding_opt.bind("<FocusOut>", lambda e: self.on_box_padding_change())
         self.box_padding_opt.bind("<Return>", lambda e: self.on_box_padding_change())
-        
 
-        ### Desktop Wallpaper Path
+        ### Maximum characters per line
         n_row += 1
-        self.desktop_wallpaper_dir_label = ctk.CTkLabel(self.settings_frame, text="Desktop Wallpaper Path:")
-        self.desktop_wallpaper_dir_label.grid(row=n_row, column=0, padx=(10, padx_left_labels), pady=10, sticky="w")
+        self.wrap_length_label = ctk.CTkLabel(self.settings_frame, text="Wrap Lenght")
+        self.wrap_length_label.grid(row=n_row, column=0, padx=(10, padx_left_labels), pady=10, sticky="w")
 
-        self.desktop_wallpaper_dir_button = ctk.CTkButton(self.settings_frame, text="Change Wallpaper", command=self.ChangeWallpaper)
-        self.desktop_wallpaper_dir_button.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="e")
-
-        self.desktop_wallpaper_dir_opt = ctk.CTkEntry(self.settings_frame, border_width = 0, bg_color = "transparent")
-        self.desktop_wallpaper_dir_opt.grid(row=n_row+1, column=0, columnspan =2, padx=(10,10), pady=(10,10), sticky="ew")
-        
-        self.desktop_wallpaper_dir_opt.insert('end', self.settings["desktop_wallpaper"])
-
+        self.wrap_length_opt = ctk.CTkEntry(self.settings_frame)
+        self.wrap_length_opt.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="e")
+        self.wrap_length_opt.insert('end', self.settings["wrap_length"])
+        self.wrap_length_opt.bind("<FocusOut>", lambda e: self.on_wrap_length_change())
+        self.wrap_length_opt.bind("<Return>", lambda e: self.on_wrap_length_change())
 
         ### Check for updates
         n_row += 2
@@ -383,6 +406,7 @@ class App(ctk.CTk):
 
         self.check_update_opt = ctk.CTkButton(self.settings_frame, text="Check For Updates", command=self.CheckUpdates)
         self.check_update_opt.grid(row=n_row, column=1, padx=(padx_right_optiosn, 10), pady=10, sticky="e")
+
 
         ## Reset Settings Button
         n_row += 3
@@ -412,6 +436,7 @@ class App(ctk.CTk):
         textbox_fontsize = 14 # This is a variable
         self.history_textbox = ctk.CTkTextbox(self.history_frame, font=ctk.CTkFont(size=textbox_fontsize))
         self.history_textbox.grid(row=2, column=0, columnspan=2, pady=(0, 10), padx=(10, 10), sticky="nsew")
+
         with open(self.history_file, "r", encoding="utf-8") as f:
             for line in f:
                 self.history_textbox.insert('end', line)
@@ -597,7 +622,12 @@ class App(ctk.CTk):
             pass
 
         try:
-            self.drawing_algorithm_label.configure(text=self.get_text("line_spacing"))
+            self.line_spacing_label.configure(text=self.get_text("line_spacing"))
+        except Exception:
+            pass
+
+        try:
+            self.font_weight_label.configure(text=self.get_text("font_weight"))
         except Exception:
             pass
 
@@ -642,6 +672,11 @@ class App(ctk.CTk):
             pass
 
         try:
+            self.wrap_length_label.configure(text=self.get_text("wrap_length"))
+        except Exception:
+            pass
+
+        try:
             self.desktop_wallpaper_dir_label.configure(text=self.get_text("desktop_wallpaper"))
         except Exception:
             pass
@@ -661,10 +696,6 @@ class App(ctk.CTk):
         except Exception:
             pass
 
-        try:
-            self.drawing_algorithm_label.configure(text=self.get_text("drawing_algorithm").format(version=self.VERSION))
-        except Exception:
-            pass
 
         try:
             self.reset_settings_button.configure(text=self.get_text("reset_settings"))
@@ -749,6 +780,9 @@ class App(ctk.CTk):
             self.line_spacing_opt.delete(0, "end")
             self.line_spacing_opt.insert("end", self.settings["line_spacing"])
 
+            self.font_weight_opt.delete(0, "end")
+            self.font_weight_opt.insert("end", self.settings["font_weight"])
+
             self.textbox_font_size_opt.delete(0, "end")
             self.textbox_font_size_opt.insert("end", self.settings["textbox_fontsize"])
             self.textbox.configure(font=ctk.CTkFont(size=int(self.settings["textbox_fontsize"])))
@@ -762,6 +796,9 @@ class App(ctk.CTk):
 
             self.box_padding_opt.delete(0, "end")
             self.box_padding_opt.insert("end", self.settings["box_padding"])
+
+            self.wrap_length_opt.delete(0, "end")
+            self.wrap_length_opt.insert("end", self.settings["wrap_length"])
 
             # Update the wallpaper entry widget too
             self.desktop_wallpaper_dir_opt.delete(0, "end")
@@ -837,6 +874,29 @@ class App(ctk.CTk):
         self.settings["line_spacing"] = v
         self.save_settings()
 
+    def on_font_weight_change(self):
+
+        val = self.font_weight_opt.get().strip()
+
+        if val == "":
+            return
+
+        try: v = int(val)
+        except ValueError:
+            self.font_weight_opt.delete(0, "end")
+            self.font_weight_opt.insert("end", str(self.settings.get("font_weight", "")))
+            messagebox.showerror("Invalid Value", "Font weight must be an integer.")
+            return
+
+        if v > 5 :
+            self.font_weight_opt.delete(0, "end")
+            self.font_weight_opt.insert("end", str(self.settings.get("font_weight", "")))
+            messagebox.showerror("Invalid Value", "Font weight must be > 5.")
+            return
+
+        self.settings["font_weight"] = v
+        self.save_settings()
+
     def change_position_event(self, new_position: str):
         self.settings["position"] = new_position
         self.save_settings()
@@ -877,6 +937,29 @@ class App(ctk.CTk):
                 return
 
         self.settings["box_padding"] = v
+        self.save_settings()
+
+    def on_wrap_length_change(self):
+
+        val = self.wrap_length_opt.get().strip()
+
+        if val == "":
+            return
+
+        try: v = int(val)
+        except ValueError:
+            self.wrap_length_opt.delete(0, "end")
+            self.wrap_length_opt.insert("end", str(self.settings.get("wrap_length", "")))
+            messagebox.showerror("Invalid Value", "Wrap length must be an integer between 20 and 200.")
+            return
+
+        if v < 20 or v > 200 :
+            self.wrap_length_opt.delete(0, "end")
+            self.wrap_length_opt.insert("end", str(self.settings.get("wrap_length", "")))
+            messagebox.showerror("Invalid Value", "Wrap length must be an integer between 20 and 200.")
+            return
+
+        self.settings["wrap_length"] = v
         self.save_settings()
 
     def choose_text_color(self):
@@ -921,7 +1004,7 @@ class App(ctk.CTk):
             from functions import text_handler
 
             MixedMethod(
-                text_handler(entry),
+                text_handler(entry, int(self.wrap_length_opt.get())),
                 self.desktop_wallpaper_dir_opt.get(),
                 self.position_opt.get(), 
                 FontsFinder()[self.font_opt.get()],
@@ -931,13 +1014,14 @@ class App(ctk.CTk):
                 int(self.box_padding_opt.get()),
                 int(self.text_padding_opt.get()),
                 float(self.line_spacing_opt.get()),
+                int(self.font_weight_opt.get()),
                 self.sub_files
                     )
 
         else: pass
 
         # Save to the history file
-        history = f"{datetime.date.today()}  ({datetime.datetime.now().strftime('%I:%M %p')})\n{entry}\n\n"
+        history = f"{datetime.date.today()}  ({datetime.datetime.now().strftime('%I:%M %p')})\n\n{entry}\n{'='*50}\n"
 
         try:
             with open(self.history_file, "r", encoding="utf-8") as f:
